@@ -5,6 +5,22 @@ part 'parser_entity.g.dart'; // 自动生成
 
 enum VideoType { movie, comics }
 
+class DetailEntity {
+  String id;
+  String title;
+  String href;
+  String imageSrc;
+  ParserEntity parser;
+
+  DetailEntity({
+    required this.id,
+    required this.title,
+    required this.href,
+    required this.imageSrc,
+    required this.parser,
+  });
+}
+
 class ParseResult {
   final String step1Content; // 第一步获取的原始HTML
   final List<String> step1Items; // 第一步提取的链接/内容

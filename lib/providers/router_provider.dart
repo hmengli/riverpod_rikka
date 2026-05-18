@@ -3,6 +3,8 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:rikka/screens/comics_entity.dart';
+import 'package:rikka/screens/detail/detail_page.dart';
 // import 'package:rikka/screens/comics_entity.dart';
 import 'package:rikka/screens/home_page.dart';
 import 'package:rikka/screens/login_screen.dart';
@@ -83,15 +85,15 @@ class LoginRoute extends GoRouteData with $LoginRoute {
   Widget build(BuildContext context, GoRouterState state) => LoginScreen();
 }
 
-// @TypedGoRoute<DetailsRoute>(path: '/details')
-// class DetailsRoute extends GoRouteData with $DetailsRoute {
-//   const DetailsRoute({this.$extra});
-//   final ComicsEntity? $extra;
+@TypedGoRoute<DetailsRoute>(path: '/details')
+class DetailsRoute extends GoRouteData with $DetailsRoute {
+  const DetailsRoute({this.$extra});
+  final ComicsEntity? $extra;
 
-//   @override
-//   Widget build(BuildContext context, GoRouterState state) =>
-//       DetailPage(entity: $extra);
-// }
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      DetailPage(entity: $extra!);
+}
 
 // 2. 定义分支数据 (Tab)
 class HomeBranch extends StatefulShellBranchData {

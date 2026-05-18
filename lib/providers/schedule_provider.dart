@@ -20,7 +20,7 @@ Future<List<ComicsEntity>> fetchData(Ref ref, {required String weekday}) async {
         .map((item) => ComicsEntity.fromJson(item as Map<String, dynamic>))
         .toList();
   } catch (e) {
-    Log.i('_testParseHtml:$e');
+    Log.i('fetchData:$e');
     return [];
   }
 }

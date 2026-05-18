@@ -1,7 +1,6 @@
 // lib/main.dart
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:rikka/screens/parser/parser_entity.dart';
@@ -13,17 +12,6 @@ import 'providers/router_provider.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // MediaKit.ensureInitialized();
-
-  try {
-    final version = await WebViewEnvironment.getAvailableVersion();
-    if (version != null) {
-      print('✅ WebView2 运行时已安装，版本: $version');
-    } else {
-      print('❌ WebView2 运行时未安装！');
-    }
-  } catch (e) {
-    print('❌ 检查失败: $e');
-  }
 
   /*
    * 桌面程序窗口
@@ -37,7 +25,7 @@ Future<void> main() async {
       minimumSize: Size(384, 216),
       center: true,
       // windowButtonVisibility: false,
-      titleBarStyle: TitleBarStyle.hidden,
+      // titleBarStyle: TitleBarStyle.hidden,
     );
     windowManager.waitUntilReadyToShow(windowOptions, () async {
       await windowManager.show();

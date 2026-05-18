@@ -6,7 +6,7 @@ part of 'router_provider.dart';
 // GoRouterGenerator
 // **************************************************************************
 
-List<RouteBase> get $appRoutes => [$loginRoute, $mainShellRoute];
+List<RouteBase> get $appRoutes => [$loginRoute, $detailsRoute, $mainShellRoute];
 
 RouteBase get $loginRoute =>
     GoRouteData.$route(path: '/login', factory: $LoginRoute._fromState);
@@ -29,6 +29,34 @@ mixin $LoginRoute on GoRouteData {
 
   @override
   void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $detailsRoute =>
+    GoRouteData.$route(path: '/details', factory: $DetailsRoute._fromState);
+
+mixin $DetailsRoute on GoRouteData {
+  static DetailsRoute _fromState(GoRouterState state) =>
+      DetailsRoute($extra: state.extra as ComicsEntity?);
+
+  DetailsRoute get _self => this as DetailsRoute;
+
+  @override
+  String get location => GoRouteData.$location('/details');
+
+  @override
+  void go(BuildContext context) => context.go(location, extra: _self.$extra);
+
+  @override
+  Future<T?> push<T>(BuildContext context) =>
+      context.push<T>(location, extra: _self.$extra);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location, extra: _self.$extra);
+
+  @override
+  void replace(BuildContext context) =>
+      context.replace(location, extra: _self.$extra);
 }
 
 RouteBase get $mainShellRoute => StatefulShellRouteData.$route(

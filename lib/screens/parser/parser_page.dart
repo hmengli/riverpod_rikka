@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide StepState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rikka/screens/parser/parser_repository.dart';
 import 'package:rikka/utils/logger.dart';
@@ -100,74 +100,81 @@ class ParserCard extends ConsumerWidget {
   }
 }
 
-class TestScreen extends StatefulWidget {
+class TestScreen extends ConsumerStatefulWidget {
   final ParserEntity entity;
   const TestScreen({super.key, required this.entity});
 
   @override
-  State<TestScreen> createState() => _TestScreenState();
+  ConsumerState<TestScreen> createState() => _TestScreenState();
 }
 
-class _TestScreenState extends State<TestScreen> {
+class _TestScreenState extends ConsumerState<TestScreen> {
   final TextEditingController _keywordController = TextEditingController();
 
-  bool _isRunning = false;
-  String _resultsStep1 = '';
   List<Map<String, String?>> _resultsStep2 = [];
   List<List<Map<String, String>>> _resultsStep3 = [];
 
-  void _resetTasks() {
-    _resultsStep1 = '';
-    _resultsStep2 = [];
-    _resultsStep3 = [];
-  }
+  void _addPostFram() {
+    final parserService = ref.read(parserServiceProvider);
+    ref.read(workflowProvider.notifier).setup([
+      StepConfig(
+        id: 'login',
+        title: '页面验证',
+        action: (prev) async {
+          String resultsStep1 = await parserService.parseWithConfig(
+            _keywordController.text,
+            step1Url: widget.entity.searchUrl,
+            entity: widget.entity,
+          );
+          if (resultsStep1.isNotEmpty) return resultsStep1;
+          throw Exception("数据异常");
+        },
+        errorMessage: '登录失败，请检查网络',
+      ),
+      StepConfig(
+        id: 'fetch_data',
+        title: '获取数据列表',
+        action: (prev) async {
+          _resultsStep2 = parserService.extractLinks1(
+            prev,
+            titleSelector: widget.entity.searchTitle,
+            hrefSelector: widget.entity.searchHref,
+          );
+          return _resultsStep2;
+        },
+        // errorMessage: '获取数据出错，可自定义', // 可选
+      ),
+      StepConfig(
+        id: 'process',
+        title: '获取播放列表',
+        action: (prev) async {
+          if (_resultsStep2.isNotEmpty) {
+            String step3Html = await parserService.parseWithConfig(
+              null,
+              step1Url:
+                  '${widget.entity.basisUrl}${_resultsStep2.first['href']}',
+              entity: widget.entity,
+            );
 
-  Future<void> _startTasks() async {
-    if (_isRunning) return;
-    setState(() {
-      _isRunning = true;
-      _resetTasks();
-    });
-    try {
-      _resultsStep1 = await ParserService.parseWithConfig(
-        widget.entity.searchUrl,
-        widget.entity,
-        search: _keywordController.text,
-      );
-      setState(() {});
-
-      _resultsStep2 = ParserService.extractLinks1(
-        _resultsStep1,
-        titleSelector: widget.entity.searchTitle,
-        hrefSelector: widget.entity.searchHref,
-      );
-      Log.i('$_resultsStep2');
-      setState(() {});
-
-      if (_resultsStep2.isNotEmpty) {
-        String step3Html = await ParserService.parseWithConfig(
-          '${widget.entity.basisUrl}${_resultsStep2.first['href']}',
-          widget.entity,
-        );
-
-        _resultsStep3 = ParserService.extractLinks2(
-          step3Html,
-          selector: widget.entity.chapterRoad,
-          selectorValue: widget.entity.chapterList,
-        );
-      }
-      Log.i('$_resultsStep3');
-    } catch (e) {
-      _resultsStep1 = '网络错误，请检查网络';
-    } finally {
-      setState(() {
-        _isRunning = false;
-      });
-    }
+            _resultsStep3 = ParserService.extractLinks2(
+              step3Html,
+              selector: widget.entity.chapterRoad,
+              selectorValue: widget.entity.chapterList,
+            );
+          }
+          return _resultsStep3;
+        },
+      ),
+    ]);
+    ref.read(workflowProvider.notifier).run();
   }
 
   @override
   Widget build(BuildContext context) {
+    final workflow = ref.watch(workflowProvider);
+    final steps = workflow.steps;
+    final states = workflow.states;
+
     return Scaffold(
       appBar: AppBar(title: Text('测试: ${widget.entity.basisUrl}')),
       body: Column(
@@ -186,27 +193,52 @@ class _TestScreenState extends State<TestScreen> {
                   ),
                 ),
                 SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _isRunning ? null : _startTasks,
-                  child: Text('搜索'),
-                ),
+                ElevatedButton(onPressed: _addPostFram, child: Text('搜索')),
               ],
             ),
           ),
-          Expanded(child: showResults(_resultsStep1)),
-          Expanded(child: showResults(_resultsStep2)),
-          Expanded(child: showResults(_resultsStep3)),
+          Expanded(
+            child: ListView.builder(
+              itemCount: steps.length,
+              itemBuilder: (context, index) {
+                final step = steps[index];
+                final state = states[index];
+                return _buildStepCard(step, state);
+              },
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget showResults(dynamic results) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Text(
-        results.toString(),
-        style: TextStyle(fontSize: 16, height: 1.5),
+  Widget _buildStepCard(StepConfig step, StepStateModel state) {
+    Widget leading;
+    switch (state.status) {
+      case StepStatus.idle:
+        leading = Icon(Icons.circle_outlined, color: Colors.grey);
+        break;
+      case StepStatus.loading:
+        leading = CircularProgressIndicator(strokeWidth: 2);
+        break;
+      case StepStatus.success:
+        leading = Icon(Icons.check_circle, color: Colors.green);
+        break;
+      case StepStatus.error:
+        leading = Icon(Icons.error, color: Colors.red);
+        break;
+    }
+    Log.d('_buildStepCard: ${state.status}');
+    return Card(
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: ListTile(
+        leading: leading,
+        title: Text(step.title),
+        subtitle: state.status == StepStatus.error
+            ? Text(state.error ?? '未知错误', style: TextStyle(color: Colors.red))
+            : state.status == StepStatus.success
+            ? Text('结果: ${state.result}', maxLines: 3)
+            : null,
       ),
     );
   }

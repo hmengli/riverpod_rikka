@@ -1,9 +1,10 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_ce/hive.dart';
 import 'package:rikka/utils/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'parser_entity.dart';
-import 'parser_repository.dart';
 
 part 'parser_provide.g.dart';
 
@@ -51,4 +52,35 @@ class ParserNotifier extends _$ParserNotifier {
     ref.invalidate(parserListProvider);
     state = const AsyncValue.data(null);
   }
+}
+
+Map configMap = {VideoType.movie: 'comicsList', VideoType.comics: 'configList'};
+
+// 提供 Box<Todo> 实例
+final parserBoxProvider = Provider<Box<ParserEntity>>((ref) {
+  Log.d('parserBoxProvider');
+  return Hive.box<ParserEntity>('configsBox');
+});
+
+// 提供 ParserRepository 实例
+final parserRepositoryProvider = Provider<ParserRepository>((ref) {
+  Log.d('parserRepositoryProvider');
+  final box = ref.watch(parserBoxProvider);
+  return ParserRepository(box);
+});
+
+class ParserRepository {
+  final Box<ParserEntity> box;
+
+  ParserRepository(this.box);
+
+  List<ParserEntity> getAll() => box.values.toList();
+
+  Future<void> add(ParserEntity todo) => box.put(todo.name, todo);
+
+  Future<void> update(ParserEntity todo) => box.put(todo.name, todo);
+
+  Future<void> delete(String name) => box.delete(name);
+
+  // Stream<void> watch() => box.watch().map((event) => null);
 }
