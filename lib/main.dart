@@ -1,122 +1,93 @@
+// lib/main.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:rikka/screens/parser/parser_entity.dart';
+import 'package:rikka/utils/logger.dart';
+import 'package:rikka/utils/utils.dart';
+import 'package:window_manager/window_manager.dart';
+import 'providers/router_provider.dart';
 
-void main() {
-  runApp(const MyApp());
-}
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // MediaKit.ensureInitialized();
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
+  try {
+    final version = await WebViewEnvironment.getAvailableVersion();
+    if (version != null) {
+      print('✅ WebView2 运行时已安装，版本: $version');
+    } else {
+      print('❌ WebView2 运行时未安装！');
+    }
+  } catch (e) {
+    print('❌ 检查失败: $e');
   }
-}
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+  /*
+   * 桌面程序窗口
+   */
+  if (Utils.isDesktop()) {
+    await windowManager.ensureInitialized();
+    // await windowManager.setPreventClose(true);
+    // 设置窗口初始大小等（可选）
+    WindowOptions windowOptions = WindowOptions(
+      size: Size(1280, 720),
+      minimumSize: Size(384, 216),
+      center: true,
+      // windowButtonVisibility: false,
+      titleBarStyle: TitleBarStyle.hidden,
+    );
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
     });
   }
 
+  /*
+   * Log  日志
+   */
+  await Log.init(
+    LogConfig(
+      level: LogLevel.debug, // 显示 debug 及以上
+      enableConsole: true, // 输出到控制台
+      enableFile: true, // 同时写入文件
+      maxFileCount: 5, // 最多保留 5 个日志文件
+      fileMaxAge: Duration(days: 3), // 超过 3 天的日志自动删除
+      isRelease: kReleaseMode, // 根据模式自动调整颜色
+    ),
+  );
+  // 或者简单初始化（开发用）
+  // await Log.initDefault();
+
+  /*
+   * Hive  本地数据库初始化
+   */
+  await Hive.initFlutter();
+  Hive.registerAdapter(ParserEntityAdapter()); // 注册适配器
+  await Hive.openBox<ParserEntity>('configsBox');
+
+  runApp(const ProviderScope(child: AppWidget()));
+}
+
+class AppWidget extends ConsumerWidget {
+  const AppWidget({super.key});
+
   @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 获取 GoRouter 实例
+    final router = ref.watch(goRouterProvider);
+
+    return MaterialApp.router(
+      theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
+      routerConfig: router,
+      builder: (context, child) {
+        if (Utils.isDesktop()) {
+          return DragToMoveArea(child: child!);
+        }
+        return GestureDetector(child: child!);
+      },
     );
   }
 }
