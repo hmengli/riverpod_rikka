@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:html/parser.dart' as parser;
-import 'package:http/http.dart' as http;
+import 'package:rikka/screens/parser/api_service.dart';
+// import 'package:http/http.dart' as http;
 import 'package:rikka/utils/logger.dart';
 
 import 'parser_entity.dart';
@@ -135,10 +136,11 @@ final workflowProvider = StateNotifierProvider<WorkflowNotifier, WorkflowState>(
 
 /// 步骤执行函数签名：
 ///   - 输入：前一步的结果（第一步为 null）
+// ignore: unintended_html_in_doc_comment
 ///   - 输出：Future<dynamic> 当前步骤的结果
 typedef StepAction = Future<dynamic> Function(dynamic previousResult);
 
-// 提供 ParserRepository 实例
+// 定义带参数的 family provider
 final parserServiceProvider = Provider<ParserService>((ref) {
   Log.d('parserServiceProvider');
   return ParserService();
@@ -147,9 +149,9 @@ final parserServiceProvider = Provider<ParserService>((ref) {
 class ParserService {
   // 执行完整的三步解析
   Future<String> parseWithConfig(
-    String? search, {
-    required String step1Url,
+    String step1Url, {
     required ParserEntity entity,
+    String? search,
   }) async {
     try {
       if (search != null) {
@@ -168,9 +170,9 @@ class ParserService {
   }) async {
     Log.i('请求URL: $url');
 
-    final response = await http.get(
-      Uri.parse(url),
-      headers: {
+    final response = await Http().get(
+      url,
+      queryParams: {
         'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': 'text/html,application/xhtml+xml',
@@ -181,7 +183,7 @@ class ParserService {
 
     if (response.statusCode == 200) {
       Log.i('请求URL: ${response.statusCode}');
-      return response.body;
+      return response.data;
     } else {
       throw Exception('HTTP ${response.statusCode}');
     }
@@ -209,7 +211,7 @@ class ParserService {
   }
 
   // 提取链接或内容
-  static List<List<Map<String, String>>> extractLinks2(
+  List<List<Map<String, String>>> extractLinks2(
     String html, {
     required String selector,
     required String selectorValue,
@@ -225,5 +227,12 @@ class ParserService {
         };
       }).toList();
     });
+  }
+
+  // 提取链接或内容
+  String? extractLinks3(String html, {required String selector}) {
+    final document = parser.parse(html);
+    final elements = document.querySelector(selector);
+    return elements?.attributes['src'].toString();
   }
 }

@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:http/http.dart' as http;
+import 'package:rikka/screens/parser/api_service.dart';
+// import 'package:http/http.dart' as http;
 import 'package:rikka/utils/logger.dart';
 import 'package:rikka/utils/utils.dart';
 
@@ -11,7 +12,7 @@ class CookieSilentService {
   CookieSilentService();
 
   bool _initialized = false;
-  bool _disposed = false;           // 新增：标记是否已释放
+  bool _disposed = false; // 新增：标记是否已释放
   late Completer<void> _pageLoadCompleter = Completer();
   late Completer<void> _submitCompleter = Completer();
   late WebUri webUri;
@@ -20,7 +21,8 @@ class CookieSilentService {
   late InAppWebViewController _webViewController;
 
   final Completer<InAppWebViewController> _controllerCompleter = Completer();
-  Future<InAppWebViewController> get controllerReady => _controllerCompleter.future;
+  Future<InAppWebViewController> get controllerReady =>
+      _controllerCompleter.future;
 
   final _cookieManager = CookieManager.instance();
 
@@ -49,14 +51,14 @@ class CookieSilentService {
           final url = request.url.toString();
           if (url.contains('/verify/')) {
             Log.d('Request:$url');
-            final response = await http.get(Uri.parse(url));
-            capturedCaptchaBytes = response.bodyBytes;
+            final response = await Http().get(url);
+            capturedCaptchaBytes = response.data;
             _submitCompleter.complete();
 
             return WebResourceResponse(
               data: capturedCaptchaBytes,
               statusCode: 200,
-              headers: Map.from(response.headers)
+              headers: Map.from(response.headers.map)
                 ..remove('content-length')
                 ..remove('transfer-encoding'),
             );
@@ -82,18 +84,18 @@ class CookieSilentService {
   Future<Uint8List?> captureScreenshot(String url) async {
     Log.d('getScreenshot: $url');
     try {
-        if (_disposed) throw StateError('Service already disposed');
-        final controller = await controllerReady;
-        webUri = WebUri(url);
-        final currentUrl = await _webViewController.getUrl();
+      if (_disposed) throw StateError('Service already disposed');
+      final controller = await controllerReady;
+      webUri = WebUri(url);
+      final currentUrl = await _webViewController.getUrl();
 
-        if (currentUrl != null && currentUrl.path != webUri.path) {
-          await controller.loadUrl(urlRequest: URLRequest(url: webUri));
-          Log.d('currentUrl: $currentUrl');
-          Log.d('webUri: $webUri');
-          await _submitCompleter.future.timeout(Duration(seconds: 5));
-        }
-        return capturedCaptchaBytes;
+      if (currentUrl != null && currentUrl.path != webUri.path) {
+        await controller.loadUrl(urlRequest: URLRequest(url: webUri));
+        Log.d('currentUrl: $currentUrl');
+        Log.d('webUri: $webUri');
+        await _submitCompleter.future.timeout(Duration(seconds: 5));
+      }
+      return capturedCaptchaBytes;
     } catch (e) {
       Log.e('获取验证码失败: $e');
       return null;
@@ -103,19 +105,20 @@ class CookieSilentService {
   Future<Uint8List?> getScreenshot(String img) async {
     Log.d('getScreenshot: $img');
     try {
-        if (_disposed) throw StateError('Service already disposed');
-        final controller = await controllerReady;
-        _submitCompleter = Completer();
+      if (_disposed) throw StateError('Service already disposed');
+      final controller = await controllerReady;
+      _submitCompleter = Completer();
 
-        final submitJs = """
+      final submitJs =
+          """
           (function() {
             const img = document.querySelector('$img');
             if (img) img.click();
           })();
         """;
-        controller.evaluateJavascript(source: submitJs);
-        await _submitCompleter.future.timeout(Duration(seconds: 3));
-        return capturedCaptchaBytes;
+      controller.evaluateJavascript(source: submitJs);
+      await _submitCompleter.future.timeout(Duration(seconds: 3));
+      return capturedCaptchaBytes;
     } catch (e) {
       Log.e('获取验证码失败: $e');
       return null;
@@ -123,17 +126,18 @@ class CookieSilentService {
   }
 
   Future<String?> submitCaptcha(
-      String? code, {
-        required String input,
-        required String submit,
-      }) async {
+    String? code, {
+    required String input,
+    required String submit,
+  }) async {
     try {
       if (_disposed) throw StateError('Service already disposed');
       Log.d('submitCaptcha: $code');
       final controller = await controllerReady;
       _pageLoadCompleter = Completer();
-      if (code != null){
-        final submitJs = """
+      if (code != null) {
+        final submitJs =
+            """
           (function() {
             const input = document.querySelector('$input');
             if (input) {
@@ -156,12 +160,14 @@ class CookieSilentService {
   }
 
   void dispose() {
-    if(!_initialized) return;
+    if (!_initialized) return;
     if (_disposed) return;
     _disposed = true;
     _initialized = false;
     if (!_controllerCompleter.isCompleted) {
-      _controllerCompleter.completeError(StateError('Service disposed before initialization'));
+      _controllerCompleter.completeError(
+        StateError('Service disposed before initialization'),
+      );
     }
     // _webViewController.dispose();
     _headlessWebView.dispose();

@@ -122,8 +122,9 @@ class _TestScreenState extends ConsumerState<TestScreen> {
         title: '页面验证',
         action: (prev) async {
           String resultsStep1 = await parserService.parseWithConfig(
-            _keywordController.text,
-            step1Url: widget.entity.searchUrl,
+            widget.entity.searchUrl,
+
+            search: _keywordController.text,
             entity: widget.entity,
           );
           if (resultsStep1.isNotEmpty) return resultsStep1;
@@ -150,9 +151,7 @@ class _TestScreenState extends ConsumerState<TestScreen> {
         action: (prev) async {
           if (_resultsStep2.isNotEmpty) {
             String step3Html = await parserService.parseWithConfig(
-              null,
-              step1Url:
-                  '${widget.entity.basisUrl}${_resultsStep2.first['href']}',
+              '${widget.entity.basisUrl}${_resultsStep2.first['href']}',
               entity: widget.entity,
             );
 

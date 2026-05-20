@@ -18,17 +18,18 @@ samples, guidance on mobile development, and a full API reference.
 
 
 
-git update-index --assume-unchanged windows\\flutter\\generated\_plugin\_registrant.cc
+git update-index --assume-unchanged windows/flutter/generated_plugin_registrant.cc
+git update-index --assume-unchanged windows/flutter/generated_plugin_registrant.h
+git update-index --assume-unchanged windows/flutter/generated_plugins.cmake
 
-git update-index --assume-unchanged windows\\flutter\\generated\_plugins.cmake
+git update-index --assume-unchanged linux/flutter/generated_plugin_registrant.cc
+git update-index --assume-unchanged linux/flutter/generated_plugin_registrant.h
+git update-index --assume-unchanged linux/flutter/generated_plugins.cmake
 
-git update-index --assume-unchanged linux\\flutter\\generated\_plugin\_registrant.cc
-
-
-
-git update-index --assume-unchanged linux\\flutter\\generated\_plugins.cmake
-
-git update-index --assume-unchanged macos\\Flutter\\GeneratedPluginRegistrant.swift
+git update-index --assume-unchanged macos/Flutter/GeneratedPluginRegistrant.swift
 
 git update-index --assume-unchanged pubspec.lock
+
+$env:CXXFLAGS = "-D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS"
+flutter run -d windows
 

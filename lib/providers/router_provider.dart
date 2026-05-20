@@ -56,8 +56,6 @@ GoRouter goRouter(Ref ref) {
       // 正在加载，留在加载页
       if (authState.isLoading) return '/splash';
 
-      Log.i('redirect:${authState.value}');
-
       final isLoggedIn = authState.value != null;
       final isSplashPage = state.matchedLocation == '/splash';
       final isLoginPage = state.matchedLocation == '/login';
