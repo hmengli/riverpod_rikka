@@ -66,7 +66,7 @@ class _VideoAnimaControllerState extends ConsumerState<VideoAnimaController>
 
   @override
   Widget build(BuildContext context) {
-    final player = ref.read(playerProvider);
+    final player = ref.watch(playerProvider);
     return GestureDetector(
       onTap: _controlsManager.toggleControls,
       child: Container(
@@ -181,12 +181,12 @@ class VideoNativeFullButton extends ConsumerWidget {
     return IconButton(
       icon: Icon(isFull ? Icons.fullscreen_exit : Icons.fullscreen),
       onPressed: () async {
+        ref.read(videoProvider.notifier).setFulling();
         if (isFull) {
           await defaultExitNativeFullscreen();
         } else {
           await defaultEnterNativeFullscreen();
         }
-        ref.read(videoProvider.notifier).setFulling();
       },
     );
   }

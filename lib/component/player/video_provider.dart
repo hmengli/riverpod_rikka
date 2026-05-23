@@ -38,12 +38,12 @@ final isFullProvider = Provider<bool>((ref) {
 
 /// 暴露 VideoController 实例（供 media_kit_video 的 Video 组件使用）
 final videoControllerProvider = Provider<VideoController>((ref) {
-  return ref.watch(videoProvider.notifier).controller;
+  return ref.read(videoProvider.notifier).controller;
 });
 
 /// 暴露 Player 实例（可选）
 final playerProvider = Provider<Player>((ref) {
-  return ref.watch(videoProvider.notifier).player;
+  return ref.read(videoProvider.notifier).player;
 });
 
 /// 辅助类，用于封装 ProgressBar 需要的状态

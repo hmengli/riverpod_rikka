@@ -4,15 +4,14 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rikka/screens/comics_entity.dart';
-import 'package:rikka/screens/detail/detail_page.dart';
-// import 'package:rikka/screens/comics_entity.dart';
+import 'package:rikka/screens/schedule/detail/detail_page.dart';
 import 'package:rikka/screens/home_page.dart';
 import 'package:rikka/screens/login_screen.dart';
 import 'package:rikka/screens/parser/parser_entity.dart';
 import 'package:rikka/screens/parser/parser_page.dart';
-import 'package:rikka/screens/schedule_page.dart';
+import 'package:rikka/screens/schedule/detail/video/playlist_page.dart';
+import 'package:rikka/screens/schedule/schedule_page.dart';
 import 'package:rikka/screens/settings_page.dart';
-import 'package:rikka/utils/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:transit_kit/transit_kit.dart';
 import 'auth_provider.dart';
@@ -58,13 +57,13 @@ GoRouter goRouter(Ref ref) {
 
       final isLoggedIn = authState.value != null;
       final isSplashPage = state.matchedLocation == '/splash';
-      final isLoginPage = state.matchedLocation == '/login';
+      final isLoginPage = state.matchedLocation == '/';
 
       // 已登录，但当前在登录页或加载页 -> 跳转到主页
       if (isLoggedIn && (isLoginPage || isSplashPage)) return '/home';
 
       // 未登录，且当前页面不是登录页 -> 跳转到登录页
-      if (!isLoggedIn && !isLoginPage) return '/login';
+      if (!isLoggedIn && !isLoginPage) return '/';
 
       // 无需重定向
       return null;
@@ -75,7 +74,7 @@ GoRouter goRouter(Ref ref) {
   return router;
 }
 
-@TypedGoRoute<LoginRoute>(path: '/login')
+@TypedGoRoute<LoginRoute>(path: '/')
 class LoginRoute extends GoRouteData with $LoginRoute {
   const LoginRoute();
 
@@ -91,6 +90,16 @@ class DetailsRoute extends GoRouteData with $DetailsRoute {
   @override
   Widget build(BuildContext context, GoRouterState state) =>
       DetailPage(entity: $extra!);
+}
+
+@TypedGoRoute<VideoPlayerRoute>(path: '/videoplayer')
+class VideoPlayerRoute extends GoRouteData with $VideoPlayerRoute {
+  const VideoPlayerRoute({this.$extra});
+  final DetailEntity? $extra;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      VideoPlayerPage(detail: $extra!);
 }
 
 // 2. 定义分支数据 (Tab)

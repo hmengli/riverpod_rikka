@@ -1,6 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce/hive.dart';
+import 'package:rikka/screens/schedule/detail/captcha_service.dart';
+import 'package:rikka/screens/schedule/detail/silent_cookie_service.dart';
 import 'package:rikka/utils/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -17,6 +21,66 @@ Future<List<ParserEntity>> parserList(Ref ref) async {
   // state = const AsyncValue.data(parserList);
   // 返回初始数据
   return parserList;
+}
+
+@riverpod
+class CodeNotifier extends _$CodeNotifier {
+  @override
+  Future<String?> build() async {
+    return null;
+  }
+
+  Future<String?> getCode(Uint8List prev) async {
+    try {
+      state = AsyncValue.loading();
+      final data = await CaptchaService.recognizeCaptcha(prev);
+      Log.i('getCode: $data');
+      state = AsyncValue.data(data);
+      return data;
+    } catch (e) {
+      state = AsyncValue.error(e, StackTrace.current);
+    }
+    return null;
+  }
+}
+
+@riverpod
+class CookieNotifier extends _$CookieNotifier {
+  late CookieSilentService cookie;
+
+  @override
+  Future<Uint8List?> build() async {
+    cookie = ref.read(cookieSilentServiceProvider);
+    // 注册销毁回调：取消所有进行中的异步任务
+    ref.onDispose(() {
+      cookie.dispose();
+    });
+    return null;
+  }
+
+  Future<void> loadingPage(String step1Url) async {
+    await cookie.captureScreenshot(step1Url);
+  }
+
+  Future<Uint8List?> setScreenshot(String verifyPng) async {
+    try {
+      state = AsyncValue.loading();
+      final data = await cookie.getScreenshot(verifyPng);
+      state = AsyncValue.data(data);
+      return data;
+    } catch (e) {
+      state = AsyncValue.error(e, StackTrace.current);
+      return null;
+    }
+  }
+
+  Future<String?> parserCookie(
+    String? code, {
+    required String input,
+    required String submit,
+  }) {
+    return cookie.submitCaptcha(code, input: input, submit: submit);
+  }
 }
 
 @riverpod

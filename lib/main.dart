@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:media_kit/media_kit.dart';
 import 'package:rikka/screens/parser/parser_entity.dart';
 import 'package:rikka/utils/logger.dart';
 import 'package:rikka/utils/utils.dart';
@@ -11,7 +12,7 @@ import 'providers/router_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // MediaKit.ensureInitialized();
+  MediaKit.ensureInitialized();
 
   /*
    * 桌面程序窗口
@@ -57,6 +58,7 @@ Future<void> main() async {
   await Hive.openBox<ParserEntity>('configsBox');
 
   runApp(const ProviderScope(child: AppWidget()));
+  // runApp(MaterialApp(home: MyCaptchaPage()));
 }
 
 class AppWidget extends ConsumerWidget {

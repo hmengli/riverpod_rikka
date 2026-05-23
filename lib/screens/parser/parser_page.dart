@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' hide StepState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rikka/component/worker/work_widget.dart';
 import 'package:rikka/screens/parser/parser_repository.dart';
 import 'package:rikka/utils/logger.dart';
 
@@ -114,21 +115,99 @@ class _TestScreenState extends ConsumerState<TestScreen> {
   List<Map<String, String?>> _resultsStep2 = [];
   List<List<Map<String, String>>> _resultsStep3 = [];
 
-  void _addPostFram() {
+  List<StepConfig> stepConfigs() {
     final parserService = ref.read(parserServiceProvider);
-    ref.read(workflowProvider.notifier).setup([
+    List<StepConfig> stepConfigs = [];
+    Log.i('cookie: ${widget.entity.cookie}');
+    if (widget.entity.verify && widget.entity.cookie.isEmpty) {
+      final notifier = ref.read(cookieProvider.notifier);
+      final image = ref.watch(cookieProvider);
+
+      final pro = ref.read(codeProvider.notifier);
+      final code = ref.watch(codeProvider);
+
+      String step1Url = widget.entity.searchUrl;
+      String vodName = _keywordController.text;
+      step1Url = step1Url.replaceAll('@keyword', vodName);
+
+      stepConfigs.addAll({
+        StepConfig(
+          id: 'loadingPage',
+          title: '加载页面',
+          action: (prev) async {
+            notifier.loadingPage(step1Url);
+            await Future.delayed(Duration(seconds: 1));
+          },
+          errorMessage: ' 失败，请检查网络',
+        ),
+        StepConfig(
+          id: 'getImage',
+          title: '获取验证码',
+          action: (prev) async {
+            return notifier.setScreenshot(widget.entity.verifyPng);
+          },
+          errorMessage: '登录失败，请检查网络',
+          subtitle: (v) {
+            return image.when(
+              data: (data) => data != null
+                  ? Image.memory(data, width: 200, height: 50)
+                  : CircularProgressIndicator(),
+              error: (e, t) => Center(child: Text(e.toString())),
+              loading: () => Center(child: CircularProgressIndicator()),
+            );
+          },
+        ),
+        StepConfig(
+          id: 'parserImage',
+          title: '解析验证码',
+          action: (prev) async {
+            return pro.getCode(prev);
+          },
+          subtitle: (v) {
+            return code.when(
+              data: (data) => data != null
+                  ? Center(child: Text(data))
+                  : CircularProgressIndicator(),
+              error: (e, t) => Center(child: Text(e.toString())),
+              loading: () => Center(child: CircularProgressIndicator()),
+            );
+          },
+          errorMessage: '登录失败，请检查网络',
+        ),
+        StepConfig(
+          id: 'parserCookie',
+          title: '获取Cookie',
+          action: (prev) async {
+            final cookie = await notifier.parserCookie(
+              prev,
+              input: widget.entity.verifyInput,
+              submit: widget.entity.verifySubmit,
+            );
+            widget.entity.cookie = cookie ?? '';
+            await Future.delayed(Duration(seconds: 4));
+          },
+          subtitle: (v) {
+            return Center(child: Text(v.toString(), maxLines: 3));
+          },
+          errorMessage: '登录失败，请检查网络',
+        ),
+      });
+    }
+    stepConfigs.addAll({
       StepConfig(
         id: 'login',
         title: '页面验证',
         action: (prev) async {
           String resultsStep1 = await parserService.parseWithConfig(
             widget.entity.searchUrl,
-
             search: _keywordController.text,
             entity: widget.entity,
           );
           if (resultsStep1.isNotEmpty) return resultsStep1;
           throw Exception("数据异常");
+        },
+        subtitle: (v) {
+          return Center(child: Text(v.toString(), maxLines: 3));
         },
         errorMessage: '登录失败，请检查网络',
       ),
@@ -143,6 +222,9 @@ class _TestScreenState extends ConsumerState<TestScreen> {
           );
           return _resultsStep2;
         },
+        subtitle: (v) {
+          return Center(child: Text(v.toString(), maxLines: 3));
+        },
         // errorMessage: '获取数据出错，可自定义', // 可选
       ),
       StepConfig(
@@ -154,8 +236,7 @@ class _TestScreenState extends ConsumerState<TestScreen> {
               '${widget.entity.basisUrl}${_resultsStep2.first['href']}',
               entity: widget.entity,
             );
-
-            _resultsStep3 = ParserService.extractLinks2(
+            _resultsStep3 = parserService.extractLinks2(
               step3Html,
               selector: widget.entity.chapterRoad,
               selectorValue: widget.entity.chapterList,
@@ -163,22 +244,23 @@ class _TestScreenState extends ConsumerState<TestScreen> {
           }
           return _resultsStep3;
         },
+        subtitle: (v) {
+          return Center(child: Text(v.toString(), maxLines: 3));
+        },
       ),
-    ]);
-    ref.read(workflowProvider.notifier).run();
+    });
+
+    return stepConfigs;
   }
 
   @override
   Widget build(BuildContext context) {
-    final workflow = ref.watch(workflowProvider);
-    final steps = workflow.steps;
-    final states = workflow.states;
-
     return Scaffold(
       appBar: AppBar(title: Text('测试: ${widget.entity.basisUrl}')),
-      body: Column(
-        children: [
-          Padding(
+      body: WorkWidget(
+        stepConfigs: stepConfigs(),
+        builder: (Function aexcute) {
+          return Padding(
             padding: EdgeInsets.all(16),
             child: Row(
               children: [
@@ -192,52 +274,11 @@ class _TestScreenState extends ConsumerState<TestScreen> {
                   ),
                 ),
                 SizedBox(width: 8),
-                ElevatedButton(onPressed: _addPostFram, child: Text('搜索')),
+                ElevatedButton(onPressed: () => aexcute(), child: Text('搜索')),
               ],
             ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: steps.length,
-              itemBuilder: (context, index) {
-                final step = steps[index];
-                final state = states[index];
-                return _buildStepCard(step, state);
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStepCard(StepConfig step, StepStateModel state) {
-    Widget leading;
-    switch (state.status) {
-      case StepStatus.idle:
-        leading = Icon(Icons.circle_outlined, color: Colors.grey);
-        break;
-      case StepStatus.loading:
-        leading = CircularProgressIndicator(strokeWidth: 2);
-        break;
-      case StepStatus.success:
-        leading = Icon(Icons.check_circle, color: Colors.green);
-        break;
-      case StepStatus.error:
-        leading = Icon(Icons.error, color: Colors.red);
-        break;
-    }
-    Log.d('_buildStepCard: ${state.status}');
-    return Card(
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: ListTile(
-        leading: leading,
-        title: Text(step.title),
-        subtitle: state.status == StepStatus.error
-            ? Text(state.error ?? '未知错误', style: TextStyle(color: Colors.red))
-            : state.status == StepStatus.success
-            ? Text('结果: ${state.result}', maxLines: 3)
-            : null,
+          );
+        },
       ),
     );
   }

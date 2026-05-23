@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:rikka/screens/parser/api_service.dart';
+import 'package:http/http.dart' as http;
 import 'package:rikka/utils/logger.dart';
 import 'package:rikka/utils/utils.dart';
 
@@ -168,16 +168,16 @@ class ProxyService {
     return suffix.isEmpty ? null : suffix;
   }
 
-  Future<String> getMuUrl(String url) async {
+  Future<String> getMuUrl(String uri) async {
     // 1. 预先获取并缓存 M3U8 内容
-    final response = await Http().get(
-      url,
-      queryParams: {'User-Agent': Utils.userAgent},
+    final response = await http.get(
+      Uri.parse(uri),
+      headers: {'User-Agent': Utils.userAgent},
     );
     if (response.statusCode == 200) {
-      _cachedM3U8Content = _rewriteTsUrls(response.data);
+      _cachedM3U8Content = _rewriteTsUrls(response.body);
     }
-    return 'http://127.0.0.1:8080/proxy/mu/${Utils.encode(url)}.m3u8';
+    return 'http://127.0.0.1:8080/proxy/mu/${Utils.encode(uri)}.m3u8';
   }
 
   /// 处理播放器对 M3U8 的请求
