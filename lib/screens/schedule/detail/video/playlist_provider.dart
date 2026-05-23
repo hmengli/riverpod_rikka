@@ -3,10 +3,10 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rikka/component/player/video_provider.dart';
-import 'package:rikka/screens/parser/parser_entity.dart';
-import 'package:rikka/screens/parser/parser_repository.dart';
-import 'package:rikka/screens/proxy_service.dart';
-import 'package:rikka/screens/silent_video_service.dart';
+import 'package:rikka/screens/settings/parser/parser_entity.dart';
+import 'package:rikka/screens/settings/parser/parser_repository.dart';
+import 'package:rikka/screens/schedule/detail/video/proxy_service.dart';
+import 'package:rikka/screens/schedule/detail/video/silent_video_service.dart';
 import 'package:rikka/utils/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -54,9 +54,11 @@ class PlaylistState {
 class PlaylistNotifier extends _$PlaylistNotifier {
   late final VideoNotifier video;
   late final ParserService parserService;
+  late final VideoSilentService videoSilent;
 
   @override
   PlaylistState build() {
+    videoSilent = ref.read(videoSilentServiceProvider);
     parserService = ref.read(parserServiceProvider);
     video = ref.read(videoProvider.notifier);
     return PlaylistState();
@@ -93,7 +95,7 @@ class PlaylistNotifier extends _$PlaylistNotifier {
       if (iframeUrl != null) {
         videoUrl = iframeUrl;
       }
-      final Extractor? extractorUrl = await VideoSilentService().extract(
+      final Extractor? extractorUrl = await videoSilent.extract(
         videoUrl,
         selectorMp: detail.parser.selectorVideo,
         selectorUm: detail.parser.selectorM3u8,

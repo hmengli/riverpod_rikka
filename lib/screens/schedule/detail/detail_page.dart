@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rikka/providers/router_provider.dart';
 import 'package:rikka/screens/comics_entity.dart';
-import 'package:rikka/screens/parser/parser_entity.dart';
-import 'package:rikka/screens/parser/parser_provide.dart';
+import 'package:rikka/screens/settings/parser/parser_entity.dart';
+import 'package:rikka/screens/settings/parser/parser_provide.dart';
 import 'package:rikka/screens/schedule/schedule_page.dart';
 import 'package:rikka/utils/logger.dart';
 
 import '../../../../utils/dialog.dart';
-import 'captcha_service.dart';
 import 'detail_provider.dart';
+import 'silent_cookie_service.dart';
 
 class DetailPage extends ConsumerStatefulWidget {
   final ComicsEntity entity;

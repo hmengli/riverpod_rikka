@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart' hide StepState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rikka/component/worker/work_widget.dart';
-import 'package:rikka/screens/parser/parser_repository.dart';
+import 'package:rikka/screens/settings/parser/parser_repository.dart';
 import 'package:rikka/utils/logger.dart';
 
 import 'parser_entity.dart';

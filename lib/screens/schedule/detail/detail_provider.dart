@@ -1,6 +1,6 @@
 import 'dart:typed_data';
-import 'package:rikka/screens/parser/parser_entity.dart';
-import 'package:rikka/screens/parser/parser_repository.dart';
+import 'package:rikka/screens/settings/parser/parser_entity.dart';
+import 'package:rikka/screens/settings/parser/parser_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'silent_cookie_service.dart';

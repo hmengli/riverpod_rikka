@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rikka/screens/parser/parser_entity.dart';
+import 'package:rikka/screens/settings/parser/parser_entity.dart';
 import 'package:rikka/component/player/video_player.dart';
 import 'package:rikka/screens/schedule/schedule_page.dart';
-import 'package:rikka/utils/logger.dart';
 
 import 'playlist_provider.dart';
 
@@ -91,7 +90,6 @@ class VideoPlayerWidget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(playlistProvider.notifier);
     final playlist = ref.watch(playlistProvider);
-    final selIndex = ref.watch(selIndexProvider);
 
     if (playlist.step3Map.isEmpty) {
       return const Center(child: CircularProgressIndicator());

@@ -1,7 +1,17 @@
 import 'dart:async';
 import 'dart:collection';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rikka/utils/logger.dart';
+
+final videoSilentServiceProvider = Provider.autoDispose<VideoSilentService>((
+  ref,
+) {
+  final video = VideoSilentService();
+  video._initWebView();
+  ref.onDispose(video.dispose);
+  return video;
+});
 
 class Extractor {
   static const String mp4 = 'mp4';
