@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rikka/providers/router_provider.dart';
-import 'package:rikka/screens/comics_entity.dart';
+import 'package:rikka/router_provider.dart';
+import 'package:rikka/screens/schedule/comics_entity.dart';
 import 'package:rikka/screens/settings/parser/parser_entity.dart';
 import 'package:rikka/screens/settings/parser/parser_provide.dart';
 import 'package:rikka/screens/schedule/schedule_page.dart';

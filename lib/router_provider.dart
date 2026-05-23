@@ -3,9 +3,9 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:rikka/screens/comics_entity.dart';
+import 'package:rikka/screens/schedule/comics_entity.dart';
 import 'package:rikka/screens/schedule/detail/detail_page.dart';
-import 'package:rikka/screens/home_page.dart';
+import 'package:rikka/screens/home/home_page.dart';
 import 'package:rikka/screens/login_screen.dart';
 import 'package:rikka/screens/settings/parser/parser_entity.dart';
 import 'package:rikka/screens/settings/parser/parser_page.dart';
@@ -14,7 +14,7 @@ import 'package:rikka/screens/schedule/schedule_page.dart';
 import 'package:rikka/screens/settings/settings_page.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:transit_kit/transit_kit.dart';
-import 'auth_provider.dart';
+import 'screens/auth_provider.dart';
 part 'router_provider.g.dart';
 
 // 1. 创建负责监听认证状态并通知 GoRouter 的 Listenable 类

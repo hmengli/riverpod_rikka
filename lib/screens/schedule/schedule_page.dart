@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rikka/screens/schedule/schedule_provider.dart';
 import 'package:rikka/utils/utils.dart';
 
-import '../comics_entity.dart';
+import 'comics_entity.dart';
 
 class SchedulePage extends StatelessWidget {
   const SchedulePage({super.key});

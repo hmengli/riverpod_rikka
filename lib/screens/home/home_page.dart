@@ -1,7 +1,7 @@
 // lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/auth_provider.dart';
+import '../auth_provider.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});

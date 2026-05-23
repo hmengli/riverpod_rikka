@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:browser_headers/browser_headers.dart';
 import 'package:http/http.dart' as http;
-import 'package:rikka/screens/comics_entity.dart';
+import 'package:rikka/screens/schedule/comics_entity.dart';
 import 'package:rikka/utils/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 

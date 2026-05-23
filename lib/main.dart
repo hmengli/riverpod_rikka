@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:media_kit/media_kit.dart';
+import 'package:rikka/app_widget.dart';
 import 'package:rikka/screens/settings/parser/parser_entity.dart';
 import 'package:rikka/utils/logger.dart';
 import 'package:rikka/utils/utils.dart';
 import 'package:window_manager/window_manager.dart';
-import 'providers/router_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,7 +26,7 @@ Future<void> main() async {
       minimumSize: Size(384, 216),
       center: true,
       // windowButtonVisibility: false,
-      // titleBarStyle: TitleBarStyle.hidden,
+      titleBarStyle: TitleBarStyle.hidden,
     );
     windowManager.waitUntilReadyToShow(windowOptions, () async {
       await windowManager.show();
@@ -59,25 +59,4 @@ Future<void> main() async {
 
   runApp(const ProviderScope(child: AppWidget()));
   // runApp(MaterialApp(home: MyCaptchaPage()));
-}
-
-class AppWidget extends ConsumerWidget {
-  const AppWidget({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // 获取 GoRouter 实例
-    final router = ref.watch(goRouterProvider);
-
-    return MaterialApp.router(
-      theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
-      routerConfig: router,
-      builder: (context, child) {
-        if (Utils.isDesktop()) {
-          return DragToMoveArea(child: child!);
-        }
-        return GestureDetector(child: child!);
-      },
-    );
-  }
 }
