@@ -58,7 +58,7 @@ class PlaylistNotifier extends _$PlaylistNotifier {
 
   @override
   PlaylistState build() {
-    videoSilent = ref.read(videoSilentServiceProvider);
+    videoSilent = ref.watch(videoSilentServiceProvider);
     parserService = ref.read(parserServiceProvider);
     video = ref.read(videoProvider.notifier);
     return PlaylistState();

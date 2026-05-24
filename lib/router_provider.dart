@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:rikka/l10n/app_localizations.dart';
 import 'package:rikka/screens/schedule/comics_entity.dart';
 import 'package:rikka/screens/schedule/detail/detail_page.dart';
 import 'package:rikka/screens/home/home_page.dart';
@@ -194,6 +195,10 @@ class ScaffoldWithNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    String home = AppLocalizations.of(context)!.home;
+    String schedule = AppLocalizations.of(context)!.schedule;
+    // String favorite = AppLocalizations.of(context)!.favorite;
+    String settings = AppLocalizations.of(context)!.settings;
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: BottomNavigationBar(
@@ -202,10 +207,22 @@ class ScaffoldWithNavBar extends StatelessWidget {
           index,
           initialLocation: index == navigationShell.currentIndex,
         ),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: '首页'),
-          BottomNavigationBarItem(icon: Icon(Icons.schedule), label: '时间表'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: '设置'),
+        items: [
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.home),
+            activeIcon: const Icon(Icons.home_outlined),
+            label: home,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.schedule),
+            activeIcon: const Icon(Icons.schedule_outlined),
+            label: schedule,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.settings),
+            activeIcon: const Icon(Icons.settings_outlined),
+            label: settings,
+          ),
         ],
       ),
     );

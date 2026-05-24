@@ -32,6 +32,11 @@ dependencies:
     sdk: flutter
 
   window_manager: ^0.5.1  # 桌面系统管理
+  flutter_localizations:  # 国际化框架
+    sdk: flutter
+  intl: any               # 日期格式化，配合国际化
+  dynamic_color: ^1.8.1
+  google_fonts: ^8.0.2
 
   flutter_riverpod: ^3.3.1
   go_router: ^17.2.3
@@ -46,7 +51,6 @@ dependencies:
 
   logger: ^2.0.2+1        # 核心日志框架
   path_provider: ^2.1.3   #文件储存框架
-  intl: any               # 日期格式化，配合国际化
 
   hive_ce: ^2.19.3
   hive_ce_flutter: ^1.1.0
@@ -87,6 +91,7 @@ flutter:
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
+  generate: true  # 开启代码生成
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:

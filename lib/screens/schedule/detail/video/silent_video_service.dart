@@ -35,7 +35,7 @@ class VideoSilentService implements Disposable {
 
   HeadlessInAppWebView? _headlessWebView;
   bool _isInitialized = false;
-  bool _isDisposed = false;
+  // bool _isDisposed = false;
 
   // 任务队列
   final Queue<_ExtractTask> _taskQueue = Queue();
@@ -47,7 +47,7 @@ class VideoSilentService implements Disposable {
   // 初始化 WebView（只做一次）
   Future<void> _initWebView() async {
     if (_isInitialized) return;
-    if (_isDisposed) throw Exception('VideoSilentExtractor 已释放');
+    // if (_isDisposed) throw Exception('VideoSilentExtractor 已释放');
 
     _headlessWebView = HeadlessInAppWebView(
       initialSettings: InAppWebViewSettings(
@@ -143,10 +143,10 @@ class VideoSilentService implements Disposable {
     required String selectorMp,
     required String selectorUm,
   }) async {
-    if (_isDisposed) {
-      Log.d('⚠️ 全局提取器已释放，无法执行新任务');
-      return null;
-    }
+    // if (_isDisposed) {
+    //   Log.d('⚠️ 全局提取器已释放，无法执行新任务');
+    //   return null;
+    // }
 
     // 确保 WebView 已初始化
     await _initWebView();
@@ -222,8 +222,8 @@ class VideoSilentService implements Disposable {
   /// 释放全局资源（在应用退出时调用）
   @override
   Future<void> dispose() async {
-    if (_isDisposed) return;
-    _isDisposed = true;
+    // if (_isDisposed) return;
+    // _isDisposed = true;
 
     // 取消所有等待中的任务
     while (_taskQueue.isNotEmpty) {

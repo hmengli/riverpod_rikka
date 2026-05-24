@@ -123,9 +123,9 @@ class _RecommendTabState extends ConsumerState<RecommendTab> {
     final comics = widget.comics;
     String step1Url = parser.searchUrl;
     step1Url = step1Url.replaceAll('@keyword', comics.vodName);
-
-    final notifier = ref.read(imgProvider.notifier);
     final imgCaptcha = ref.watch(imgProvider);
+    final notifier = ref.read(imgProvider.notifier);
+
     final isCookie = ref.watch(isCookieProvider);
     Log.i('isCookie: ${parser.cookie}');
     if (!isCookie) {

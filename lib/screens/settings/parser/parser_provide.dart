@@ -45,26 +45,19 @@ class CodeNotifier extends _$CodeNotifier {
 
 @riverpod
 class CookieNotifier extends _$CookieNotifier {
-  late CookieSilentService cookie;
-
   @override
   Future<Uint8List?> build() async {
-    cookie = ref.read(cookieSilentServiceProvider);
-    // 注册销毁回调：取消所有进行中的异步任务
-    ref.onDispose(() {
-      cookie.dispose();
-    });
     return null;
   }
 
   Future<void> loadingPage(String step1Url) async {
-    await cookie.captureScreenshot(step1Url);
+    await CookieSilentService().captureScreenshot(step1Url);
   }
 
   Future<Uint8List?> setScreenshot(String verifyPng) async {
     try {
       state = AsyncValue.loading();
-      final data = await cookie.getScreenshot(verifyPng);
+      final data = await CookieSilentService().getScreenshot(verifyPng);
       state = AsyncValue.data(data);
       return data;
     } catch (e) {
@@ -78,7 +71,11 @@ class CookieNotifier extends _$CookieNotifier {
     required String input,
     required String submit,
   }) {
-    return cookie.submitCaptcha(code, input: input, submit: submit);
+    return CookieSilentService().submitCaptcha(
+      code,
+      input: input,
+      submit: submit,
+    );
   }
 }
 

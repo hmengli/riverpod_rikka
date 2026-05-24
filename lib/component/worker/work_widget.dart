@@ -22,13 +22,9 @@ class StepConfig {
 }
 
 class WorkWidget extends ConsumerStatefulWidget {
-  final List<StepConfig> stepConfigs;
+  final List<StepConfig> state;
   final Widget Function(void Function() aexcute) builder;
-  const WorkWidget({
-    super.key,
-    required this.stepConfigs,
-    required this.builder,
-  });
+  const WorkWidget({super.key, required this.state, required this.builder});
 
   @override
   ConsumerState<WorkWidget> createState() => _WorkWidgetState();
@@ -36,16 +32,14 @@ class WorkWidget extends ConsumerStatefulWidget {
 
 class _WorkWidgetState extends ConsumerState<WorkWidget> {
   void _aexcuteFram() {
-    ref.read(workflowProvider.notifier).setup(widget.stepConfigs);
+    ref.read(workflowProvider.notifier).setup(widget.state);
     ref.read(workflowProvider.notifier).run();
   }
 
   @override
   Widget build(BuildContext context) {
     final workflow = ref.watch(workflowProvider);
-
-    // final steps = workflow.steps;
-    final steps = widget.stepConfigs;
+    final steps = workflow.steps;
     final states = workflow.states;
 
     return Column(

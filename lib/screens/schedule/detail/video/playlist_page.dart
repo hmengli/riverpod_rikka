@@ -38,6 +38,7 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage>
 
   @override
   Widget build(BuildContext context) {
+    final playlist = ref.watch(playlistProvider);
     double width = MediaQuery.of(context).size.width;
     double height = MediaQuery.of(context).size.height;
     double aspect = width / height;
@@ -53,7 +54,7 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage>
         body: Column(
           children: [
             VideoPlayer(),
-            Expanded(child: VideoPlayerWidget(detail: widget.detail)),
+            Expanded(child: VideoPlayerWidget(playlist: playlist.step3Map)),
           ],
         ),
       );
@@ -64,6 +65,7 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage>
   *   播放列表
   */
   Widget getAnimatedTabControls() {
+    final playlist = ref.watch(step3MapProvider);
     return AnimatedBuilder(
       animation: _controlsManagerTab.opacityAnimation,
       builder: (context, child) {
@@ -74,7 +76,7 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage>
           child: Container(
             width: _animationTabHigh,
             decoration: BoxDecoration(boxShadow: [BoxShadow(blurRadius: 5)]),
-            child: Center(child: VideoPlayerWidget(detail: widget.detail)),
+            child: Center(child: VideoPlayerWidget(playlist: playlist)),
           ),
         );
       },
@@ -82,28 +84,33 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage>
   }
 }
 
-class VideoPlayerWidget extends ConsumerWidget {
-  final DetailEntity detail;
-  const VideoPlayerWidget({super.key, required this.detail});
+class VideoPlayerWidget extends ConsumerStatefulWidget {
+  final List<List<Map<String, String>>> playlist;
+  const VideoPlayerWidget({super.key, required this.playlist});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final notifier = ref.read(playlistProvider.notifier);
-    final playlist = ref.watch(playlistProvider);
+  ConsumerState<VideoPlayerWidget> createState() => _VideoPlayerWidgetState();
+}
 
-    if (playlist.step3Map.isEmpty) {
+class _VideoPlayerWidgetState extends ConsumerState<VideoPlayerWidget> {
+  @override
+  Widget build(BuildContext context) {
+    final notifier = ref.read(playlistProvider.notifier);
+    final selIndex = ref.watch(selIndexProvider);
+
+    if (widget.playlist.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     } else {
       return TabBarWidget(
         // onTap: (p0) => service.tabIndex(p0),
         isScrollable: true,
-        tabList: playlist.step3Map,
+        tabList: widget.playlist,
         tabs: (p1) {
           return List.generate(p1.length, (i) {
             return Tab(text: '播放列表$i');
           });
         },
-        children: playlist.step3Map
+        children: widget.playlist
             .map(
               (e) => LayoutBuilder(
                 builder: (context, box) {
@@ -117,7 +124,7 @@ class VideoPlayerWidget extends ConsumerWidget {
                       childAspectRatio: 3.0, // 子组件宽高比（宽度/高度）
                     ),
                     children: List.generate(e.length, (index) {
-                      final selected = playlist.selIndex == index;
+                      final selected = selIndex == index;
                       return Stack(
                         fit: StackFit.expand,
                         alignment: Alignment.center,

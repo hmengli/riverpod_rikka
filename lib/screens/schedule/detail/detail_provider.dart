@@ -41,11 +41,9 @@ class ImgNotifier extends _$ImgNotifier {
 
   @override
   Uint8List? build() {
-    cookie = ref.read(cookieSilentServiceProvider);
-    // 注册销毁回调：取消所有进行中的异步任务
-    ref.onDispose(() {
-      cookie.dispose();
-    });
+    cookie = CookieSilentService();
+    cookie.init();
+    ref.onDispose(cookie.dispose);
     return null;
   }
 

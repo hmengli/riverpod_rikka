@@ -1,7 +1,8 @@
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:rikka/utils/logger.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'work_widget.dart';
+part 'work_provider.g.dart';
 
 enum StepStatus { idle, loading, success, error }
 
@@ -37,8 +38,12 @@ class WorkflowState {
   }
 }
 
-class WorkflowNotifier extends StateNotifier<WorkflowState> {
-  WorkflowNotifier() : super(WorkflowState(steps: [], states: []));
+@riverpod
+class WorkflowNotifier extends _$WorkflowNotifier {
+  @override
+  WorkflowState build() {
+    return WorkflowState(steps: [], states: []);
+  }
 
   /// 设置流程配置（会重置整个流程）
   void setup(List<StepConfig> configs) {
@@ -108,8 +113,8 @@ class WorkflowNotifier extends StateNotifier<WorkflowState> {
   }
 }
 
-final workflowProvider = StateNotifierProvider<WorkflowNotifier, WorkflowState>(
-  (ref) {
-    return WorkflowNotifier();
-  },
-);
+// final workflowProvider = StateNotifierProvider<WorkflowNotifier, WorkflowState>(
+//   (ref) {
+//     return WorkflowNotifier();
+//   },
+// );

@@ -1,0 +1,13 @@
+{
+    "helloWorld": "Hello World!",
+    "light": "light",
+    "dark": "dark",
+    "system": "system",
+    "home": "home",
+    "schedule": "schedule",
+    "favorite": "favorite",
+    "settings": "settings",
+    "@helloWorld": {
+    "description": "The conventional newborn programmer greeting"
+    }
+}

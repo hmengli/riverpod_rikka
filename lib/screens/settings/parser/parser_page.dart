@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' hide StepState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rikka/component/worker/work_widget.dart';
+import 'package:rikka/screens/schedule/detail/silent_cookie_service.dart';
 import 'package:rikka/screens/settings/parser/parser_repository.dart';
 import 'package:rikka/utils/logger.dart';
 
@@ -18,8 +19,8 @@ class ParserPage extends ConsumerStatefulWidget {
 class _ParserPageState extends ConsumerState<ParserPage> {
   @override
   Widget build(BuildContext context) {
-    // final VideoType type = widget.videoType;
     final parserList = ref.watch(parserListProvider).value;
+
     Log.d('data: $parserList');
     // provider.loadConfigs(type);
     return Scaffold(
@@ -110,22 +111,27 @@ class TestScreen extends ConsumerStatefulWidget {
 }
 
 class _TestScreenState extends ConsumerState<TestScreen> {
+  @override
+  void initState() {
+    super.initState();
+    CookieSilentService().init();
+  }
+
+  @override
+  void dispose() {
+    CookieSilentService().dispose();
+    super.dispose();
+  }
+
   final TextEditingController _keywordController = TextEditingController();
 
   List<Map<String, String?>> _resultsStep2 = [];
   List<List<Map<String, String>>> _resultsStep3 = [];
 
   List<StepConfig> stepConfigs() {
-    final parserService = ref.read(parserServiceProvider);
     List<StepConfig> stepConfigs = [];
     Log.i('cookie: ${widget.entity.cookie}');
     if (widget.entity.verify && widget.entity.cookie.isEmpty) {
-      final notifier = ref.read(cookieProvider.notifier);
-      final image = ref.watch(cookieProvider);
-
-      final pro = ref.read(codeProvider.notifier);
-      final code = ref.watch(codeProvider);
-
       String step1Url = widget.entity.searchUrl;
       String vodName = _keywordController.text;
       step1Url = step1Url.replaceAll('@keyword', vodName);
@@ -135,6 +141,7 @@ class _TestScreenState extends ConsumerState<TestScreen> {
           id: 'loadingPage',
           title: '加载页面',
           action: (prev) async {
+            final notifier = ref.read(cookieProvider.notifier);
             notifier.loadingPage(step1Url);
             await Future.delayed(Duration(seconds: 1));
           },
@@ -144,40 +151,26 @@ class _TestScreenState extends ConsumerState<TestScreen> {
           id: 'getImage',
           title: '获取验证码',
           action: (prev) async {
+            final notifier = ref.read(cookieProvider.notifier);
             return notifier.setScreenshot(widget.entity.verifyPng);
           },
           errorMessage: '登录失败，请检查网络',
-          subtitle: (v) {
-            return image.when(
-              data: (data) => data != null
-                  ? Image.memory(data, width: 200, height: 50)
-                  : CircularProgressIndicator(),
-              error: (e, t) => Center(child: Text(e.toString())),
-              loading: () => Center(child: CircularProgressIndicator()),
-            );
-          },
+          subtitle: (v) => GetImage(),
         ),
         StepConfig(
           id: 'parserImage',
           title: '解析验证码',
           action: (prev) async {
-            return pro.getCode(prev);
+            return ref.read(codeProvider.notifier).getCode(prev);
           },
-          subtitle: (v) {
-            return code.when(
-              data: (data) => data != null
-                  ? Center(child: Text(data))
-                  : CircularProgressIndicator(),
-              error: (e, t) => Center(child: Text(e.toString())),
-              loading: () => Center(child: CircularProgressIndicator()),
-            );
-          },
+          subtitle: (v) => ParserImage(),
           errorMessage: '登录失败，请检查网络',
         ),
         StepConfig(
           id: 'parserCookie',
           title: '获取Cookie',
           action: (prev) async {
+            final notifier = ref.read(cookieProvider.notifier);
             final cookie = await notifier.parserCookie(
               prev,
               input: widget.entity.verifyInput,
@@ -198,6 +191,7 @@ class _TestScreenState extends ConsumerState<TestScreen> {
         id: 'login',
         title: '页面验证',
         action: (prev) async {
+          final parserService = ref.read(parserServiceProvider);
           String resultsStep1 = await parserService.parseWithConfig(
             widget.entity.searchUrl,
             search: _keywordController.text,
@@ -215,6 +209,7 @@ class _TestScreenState extends ConsumerState<TestScreen> {
         id: 'fetch_data',
         title: '获取数据列表',
         action: (prev) async {
+          final parserService = ref.read(parserServiceProvider);
           _resultsStep2 = parserService.extractLinks1(
             prev,
             titleSelector: widget.entity.searchTitle,
@@ -232,6 +227,7 @@ class _TestScreenState extends ConsumerState<TestScreen> {
         title: '获取播放列表',
         action: (prev) async {
           if (_resultsStep2.isNotEmpty) {
+            final parserService = ref.read(parserServiceProvider);
             String step3Html = await parserService.parseWithConfig(
               '${widget.entity.basisUrl}${_resultsStep2.first['href']}',
               entity: widget.entity,
@@ -258,7 +254,7 @@ class _TestScreenState extends ConsumerState<TestScreen> {
     return Scaffold(
       appBar: AppBar(title: Text('测试: ${widget.entity.basisUrl}')),
       body: WorkWidget(
-        stepConfigs: stepConfigs(),
+        state: stepConfigs(),
         builder: (Function aexcute) {
           return Padding(
             padding: EdgeInsets.all(16),
@@ -280,6 +276,38 @@ class _TestScreenState extends ConsumerState<TestScreen> {
           );
         },
       ),
+    );
+  }
+}
+
+class GetImage extends ConsumerWidget {
+  const GetImage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final image = ref.watch(cookieProvider);
+    return image.when(
+      data: (data) => data != null
+          ? Image.memory(data, width: 200, height: 50)
+          : CircularProgressIndicator(),
+      error: (e, t) => Center(child: Text(e.toString())),
+      loading: () => Center(child: CircularProgressIndicator()),
+    );
+  }
+}
+
+class ParserImage extends ConsumerWidget {
+  const ParserImage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final code = ref.watch(codeProvider);
+    return code.when(
+      data: (data) => data != null
+          ? Center(child: Text(data))
+          : CircularProgressIndicator(),
+      error: (e, t) => Center(child: Text(e.toString())),
+      loading: () => Center(child: CircularProgressIndicator()),
     );
   }
 }

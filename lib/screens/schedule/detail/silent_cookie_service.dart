@@ -3,19 +3,9 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:rikka/utils/logger.dart';
 import 'package:rikka/utils/utils.dart';
-
-final cookieSilentServiceProvider = Provider.autoDispose<CookieSilentService>((
-  ref,
-) {
-  final cookie = CookieSilentService();
-  cookie.init();
-  ref.onDispose(cookie.dispose);
-  return cookie;
-});
 
 class CookieSilentService {
   static final CookieSilentService _instance = CookieSilentService._internal();
@@ -23,7 +13,6 @@ class CookieSilentService {
   CookieSilentService._internal();
 
   bool _initialized = false;
-  bool _disposed = false; // 新增：标记是否已释放
   late Completer<void> _pageLoadCompleter = Completer();
   late Completer<Uint8List?> _capturedCompleter = Completer();
   late WebUri webUri;
@@ -39,7 +28,6 @@ class CookieSilentService {
 
   Future<void> init() async {
     if (_initialized) return;
-    if (_disposed) throw StateError('Service already disposed');
     // if (_controllerCompleter.isCompleted) return;
 
     try {
@@ -101,7 +89,6 @@ class CookieSilentService {
 
   Future<Uint8List?> captureScreenshot(String url) async {
     try {
-      if (_disposed) throw StateError('Service already disposed');
       final controller = await controllerReady;
       webUri = WebUri(url);
       final currentUrl = await _webViewController.getUrl();
@@ -119,7 +106,6 @@ class CookieSilentService {
   Future<Uint8List?> getScreenshot(String img) async {
     Log.d('getScreenshot: $img');
     try {
-      if (_disposed) throw StateError('Service already disposed');
       final controller = await controllerReady;
       _capturedCompleter = Completer();
 
@@ -233,7 +219,6 @@ class CookieSilentService {
     required String submit,
   }) async {
     try {
-      if (_disposed) throw StateError('Service already disposed');
       Log.d('submitCaptcha: $code,$input,$submit');
       final controller = await controllerReady;
       _pageLoadCompleter = Completer();
@@ -287,8 +272,6 @@ class CookieSilentService {
 
   void dispose() {
     if (!_initialized) return;
-    if (_disposed) return;
-    _disposed = true;
     _initialized = false;
     if (!_controllerCompleter.isCompleted) {
       _controllerCompleter.completeError(
