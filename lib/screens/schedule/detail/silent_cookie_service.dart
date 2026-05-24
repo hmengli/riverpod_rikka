@@ -3,15 +3,16 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:rikka/utils/logger.dart';
 import 'package:rikka/utils/utils.dart';
 
-class CookieSilentService {
-  static final CookieSilentService _instance = CookieSilentService._internal();
-  factory CookieSilentService() => _instance;
-  CookieSilentService._internal();
+final cookieServiceProvider = Provider.autoDispose<CookieSilentService>((ref) {
+  return CookieSilentService();
+});
 
+class CookieSilentService {
   bool _initialized = false;
   late Completer<void> _pageLoadCompleter = Completer();
   late Completer<Uint8List?> _capturedCompleter = Completer();
@@ -26,7 +27,7 @@ class CookieSilentService {
 
   final _cookieManager = CookieManager.instance();
 
-  Future<void> init() async {
+  Future<void> initWebView() async {
     if (_initialized) return;
     // if (_controllerCompleter.isCompleted) return;
 

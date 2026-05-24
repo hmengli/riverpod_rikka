@@ -4,13 +4,8 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rikka/utils/logger.dart';
 
-final videoSilentServiceProvider = Provider.autoDispose<VideoSilentService>((
-  ref,
-) {
-  final video = VideoSilentService();
-  video._initWebView();
-  ref.onDispose(video.dispose);
-  return video;
+final videoServiceProvider = Provider.autoDispose<VideoSilentService>((ref) {
+  return VideoSilentService();
 });
 
 class Extractor {
@@ -28,14 +23,9 @@ class Extractor {
 /// - 内部维护一个 WebView 实例，复用而不是每次都新建销毁
 /// - 任务队列串行执行，避免并发冲突
 class VideoSilentService implements Disposable {
-  // 单例
-  static final VideoSilentService _instance = VideoSilentService._internal();
-  factory VideoSilentService() => _instance;
-  VideoSilentService._internal();
-
   HeadlessInAppWebView? _headlessWebView;
   bool _isInitialized = false;
-  // bool _isDisposed = false;
+  bool _isDisposed = false;
 
   // 任务队列
   final Queue<_ExtractTask> _taskQueue = Queue();
@@ -45,7 +35,7 @@ class VideoSilentService implements Disposable {
   _ExtractTask? _currentTask;
 
   // 初始化 WebView（只做一次）
-  Future<void> _initWebView() async {
+  Future<void> initWebView() async {
     if (_isInitialized) return;
     // if (_isDisposed) throw Exception('VideoSilentExtractor 已释放');
 
@@ -143,13 +133,13 @@ class VideoSilentService implements Disposable {
     required String selectorMp,
     required String selectorUm,
   }) async {
-    // if (_isDisposed) {
-    //   Log.d('⚠️ 全局提取器已释放，无法执行新任务');
-    //   return null;
-    // }
+    if (_isDisposed) {
+      Log.d('⚠️ 全局提取器已释放，无法执行新任务');
+      return null;
+    }
 
     // 确保 WebView 已初始化
-    await _initWebView();
+    // await _initWebView();
 
     final completer = Completer<Extractor?>();
     final task = _ExtractTask(
@@ -222,8 +212,8 @@ class VideoSilentService implements Disposable {
   /// 释放全局资源（在应用退出时调用）
   @override
   Future<void> dispose() async {
-    // if (_isDisposed) return;
-    // _isDisposed = true;
+    if (_isDisposed) return;
+    _isDisposed = true;
 
     // 取消所有等待中的任务
     while (_taskQueue.isNotEmpty) {

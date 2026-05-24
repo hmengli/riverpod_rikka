@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart' hide StepState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rikka/component/worker/work_widget.dart';
-import 'package:rikka/screens/schedule/detail/silent_cookie_service.dart';
 import 'package:rikka/screens/settings/parser/parser_repository.dart';
 import 'package:rikka/utils/logger.dart';
 
@@ -111,18 +110,6 @@ class TestScreen extends ConsumerStatefulWidget {
 }
 
 class _TestScreenState extends ConsumerState<TestScreen> {
-  @override
-  void initState() {
-    super.initState();
-    CookieSilentService().init();
-  }
-
-  @override
-  void dispose() {
-    CookieSilentService().dispose();
-    super.dispose();
-  }
-
   final TextEditingController _keywordController = TextEditingController();
 
   List<Map<String, String?>> _resultsStep2 = [];
@@ -161,7 +148,7 @@ class _TestScreenState extends ConsumerState<TestScreen> {
           id: 'parserImage',
           title: '解析验证码',
           action: (prev) async {
-            return ref.read(codeProvider.notifier).getCode(prev);
+            return ref.read(getCodeProvider.notifier).getCode(prev);
           },
           subtitle: (v) => ParserImage(),
           errorMessage: '登录失败，请检查网络',
@@ -251,6 +238,7 @@ class _TestScreenState extends ConsumerState<TestScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(cookieProvider);
     return Scaffold(
       appBar: AppBar(title: Text('测试: ${widget.entity.basisUrl}')),
       body: WorkWidget(
@@ -286,13 +274,9 @@ class GetImage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final image = ref.watch(cookieProvider);
-    return image.when(
-      data: (data) => data != null
-          ? Image.memory(data, width: 200, height: 50)
-          : CircularProgressIndicator(),
-      error: (e, t) => Center(child: Text(e.toString())),
-      loading: () => Center(child: CircularProgressIndicator()),
-    );
+    return image != null
+        ? Image.memory(image, width: 200, height: 50)
+        : CircularProgressIndicator();
   }
 }
 
@@ -301,14 +285,8 @@ class ParserImage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final code = ref.watch(codeProvider);
-    return code.when(
-      data: (data) => data != null
-          ? Center(child: Text(data))
-          : CircularProgressIndicator(),
-      error: (e, t) => Center(child: Text(e.toString())),
-      loading: () => Center(child: CircularProgressIndicator()),
-    );
+    final code = ref.watch(getCodeProvider);
+    return Center(child: Text(code));
   }
 }
 

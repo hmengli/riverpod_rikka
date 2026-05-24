@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:rikka/router_provider.dart';
 import 'package:rikka/screens/schedule/schedule_provider.dart';
 import 'package:rikka/utils/utils.dart';
 
@@ -79,8 +79,7 @@ class ComicsCardH extends StatelessWidget {
       margin: EdgeInsets.zero,
       child: InkWell(
         onTap: () {
-          context.push('/details', extra: comics);
-          // Modular.to.pushNamed('/detail/${comics.vodId}/', arguments: comics);
+          DetailsRoute($extra: comics).push(context);
         },
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -98,10 +97,7 @@ class ComicsCardH extends StatelessWidget {
                     frameBuilder:
                         (context, child, frame, wasSynchronouslyLoaded) {
                           if (frame == null) {
-                            return Container(
-                              color: Colors.grey[300],
-                              child: Center(child: CircularProgressIndicator()),
-                            );
+                            return Center(child: CircularProgressIndicator());
                           }
                           return child;
                         },

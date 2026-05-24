@@ -17,53 +17,40 @@ Future<List<ParserEntity>> parserList(Ref ref) async {
   Log.d('parserList: $repo');
   List<ParserEntity> parserList = repo.getAll();
   Log.d('parserList: $parserList');
-  // state = const AsyncValue.data(parserList);
   // 返回初始数据
   return parserList;
 }
 
 @riverpod
-class CodeNotifier extends _$CodeNotifier {
+class GetCodeNotifier extends _$GetCodeNotifier {
   @override
-  Future<String?> build() async {
-    return null;
+  String build() {
+    return "";
   }
 
-  Future<String?> getCode(Uint8List prev) async {
-    try {
-      state = AsyncValue.loading();
-      final data = await CaptchaService.recognizeCaptcha(prev);
-      Log.i('getCode: $data');
-      state = AsyncValue.data(data);
-      return data;
-    } catch (e) {
-      state = AsyncValue.error(e, StackTrace.current);
-    }
-    return null;
+  Future<void> getCode(Uint8List prev) async {
+    state = await CaptchaService.recognizeCaptcha(prev);
   }
 }
 
 @riverpod
 class CookieNotifier extends _$CookieNotifier {
+  late CookieSilentService cookie;
+
   @override
-  Future<Uint8List?> build() async {
+  Uint8List? build() {
+    cookie = ref.read(cookieServiceProvider);
+    cookie.initWebView();
+    ref.onDispose(cookie.dispose);
     return null;
   }
 
   Future<void> loadingPage(String step1Url) async {
-    await CookieSilentService().captureScreenshot(step1Url);
+    state = await cookie.captureScreenshot(step1Url);
   }
 
-  Future<Uint8List?> setScreenshot(String verifyPng) async {
-    try {
-      state = AsyncValue.loading();
-      final data = await CookieSilentService().getScreenshot(verifyPng);
-      state = AsyncValue.data(data);
-      return data;
-    } catch (e) {
-      state = AsyncValue.error(e, StackTrace.current);
-      return null;
-    }
+  Future<void> setScreenshot(String verifyPng) async {
+    state = await cookie.getScreenshot(verifyPng);
   }
 
   Future<String?> parserCookie(
@@ -71,11 +58,7 @@ class CookieNotifier extends _$CookieNotifier {
     required String input,
     required String submit,
   }) {
-    return CookieSilentService().submitCaptcha(
-      code,
-      input: input,
-      submit: submit,
-    );
+    return cookie.submitCaptcha(code, input: input, submit: submit);
   }
 }
 

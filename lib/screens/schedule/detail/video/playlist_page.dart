@@ -16,24 +16,10 @@ class VideoPlayerPage extends ConsumerStatefulWidget {
 
 class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage>
     with TickerProviderStateMixin {
-  static const double _animationTabHigh = 300;
-  late AnimaController _controlsManagerTab;
-
   @override
   void initState() {
     super.initState();
     ref.read(playlistProvider.notifier).playList(widget.detail);
-    _controlsManagerTab = AnimaController(
-      vsync: this,
-      animationBegin: _animationTabHigh,
-      duration: Duration(milliseconds: 300),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controlsManagerTab.dispose();
-    super.dispose();
   }
 
   @override
@@ -43,12 +29,7 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage>
     double height = MediaQuery.of(context).size.height;
     double aspect = width / height;
     if (aspect > 1.4) {
-      return Scaffold(
-        body: VideoPlayer(
-          // animatedTab: getAnimatedTabControls(),
-          // controlsManagerTab: _controlsManagerTab,
-        ),
-      );
+      return Scaffold(body: VideoPlayer(menu: _showMenu));
     } else {
       return Scaffold(
         body: Column(
@@ -61,22 +42,22 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage>
     }
   }
 
-  /*
-  *   播放列表
-  */
-  Widget getAnimatedTabControls() {
-    final playlist = ref.watch(step3MapProvider);
-    return AnimatedBuilder(
-      animation: _controlsManagerTab.opacityAnimation,
-      builder: (context, child) {
-        return Positioned(
-          top: 0,
-          right: _controlsManagerTab.opacityAnimation.value,
-          bottom: 0,
-          child: Container(
-            width: _animationTabHigh,
-            decoration: BoxDecoration(boxShadow: [BoxShadow(blurRadius: 5)]),
-            child: Center(child: VideoPlayerWidget(playlist: playlist)),
+  void _showMenu(BuildContext context) {
+    final playlist = ref.watch(playlistProvider);
+    showDialog(
+      context: context,
+      barrierColor: Colors.transparent, // 让遮罩层透明
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.transparent, // 让对话框背景透明
+          content: Container(
+            width: 400,
+            height: 300,
+            decoration: BoxDecoration(
+              color: Colors.transparent, // 半透明白色背景
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: VideoPlayerWidget(playlist: playlist.step3Map),
           ),
         );
       },

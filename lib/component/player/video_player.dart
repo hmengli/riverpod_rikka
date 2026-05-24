@@ -8,77 +8,79 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'video_provider.dart';
 
 class VideoPlayer extends ConsumerStatefulWidget {
-  const VideoPlayer({super.key});
+  final Function(BuildContext context)? menu;
+  const VideoPlayer({super.key, this.menu});
 
   @override
   ConsumerState<VideoPlayer> createState() => _VideoPlayerState();
 }
 
-class _VideoPlayerState extends ConsumerState<VideoPlayer> {
+// [✓] 关键点 1：State 混入 SingleTickerProviderStateMixin
+// 这样 State 本身就变为了一个合格的 TickerProvider
+class _VideoPlayerState extends ConsumerState<VideoPlayer>
+    with SingleTickerProviderStateMixin {
+  // [✓] 关键点 2：在 State 内部创建并持有 Controller
+  late final AnimaController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    // vsync: this 表明用当前的 State 作为 TickerProvider
+    _controller = AnimaController(
+      vsync: this,
+      animationBegin: 0,
+      autoHide: true,
+      duration: const Duration(milliseconds: 300),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = ref.watch(videoControllerProvider);
-    return Align(
-      alignment: Alignment.topCenter,
-      child: AspectRatio(
-        aspectRatio: 16 / 9,
-        child: Stack(
-          alignment: AlignmentGeometry.center,
-          children: [
-            Video(controller: controller, controls: NoVideoControls),
-            VideoAnimaController(),
-          ],
+    return ProviderScope(
+      overrides: [
+        videoAnimationControllerProvider.overrideWithValue(_controller),
+      ],
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Stack(
+            alignment: AlignmentGeometry.center,
+            children: [
+              Video(controller: controller, controls: NoVideoControls),
+              VideoAnimaController(menu: widget.menu),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class VideoAnimaController extends ConsumerStatefulWidget {
-  const VideoAnimaController({super.key});
-
+class VideoAnimaController extends ConsumerWidget {
+  final Function(BuildContext context)? menu;
+  const VideoAnimaController({super.key, this.menu});
   @override
-  ConsumerState<VideoAnimaController> createState() =>
-      _VideoAnimaControllerState();
-}
-
-class _VideoAnimaControllerState extends ConsumerState<VideoAnimaController>
-    with TickerProviderStateMixin {
-  late AnimaController _controlsManager;
-
-  @override
-  void initState() {
-    super.initState();
-    _controlsManager = AnimaController(
-      vsync: this,
-      autoHide: true,
-      onAutoHide: () => {setState(() {})},
-      animationBegin: kMinInteractiveDimension,
-      duration: Duration(milliseconds: 300),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controlsManager.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final player = ref.watch(playerProvider);
+    final controlsManager = ref.watch(videoAnimationControllerProvider);
     return GestureDetector(
-      onTap: _controlsManager.toggleControls,
+      onTap: controlsManager.toggleControls,
       child: Container(
         color: Colors.transparent,
         child: FadeTransition(
-          opacity: _controlsManager.opacityAnimation,
+          opacity: controlsManager.opacityAnimation,
           child: Column(
             children: [
               MouseRegionWidget(
-                control: _controlsManager,
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     IconButton(
                       icon: Icon(Icons.arrow_back),
@@ -88,13 +90,17 @@ class _VideoAnimaControllerState extends ConsumerState<VideoAnimaController>
                       },
                     ),
                     Expanded(child: Text('AppBar')),
-                    // IconButton(icon: Icon(Icons.refresh), onPressed: onPressed),
+                    IconButton(
+                      icon: Icon(Icons.refresh),
+                      onPressed: menu != null
+                          ? () => menu?.call(context)
+                          : null,
+                    ),
                   ],
                 ),
               ),
               Expanded(child: Center(child: VideoPlayingButton(iconSize: 50))),
               MouseRegionWidget(
-                control: _controlsManager,
                 child: Row(
                   children: [
                     //播放按钮
@@ -192,173 +198,27 @@ class VideoNativeFullButton extends ConsumerWidget {
   }
 }
 
-class MouseRegionWidget extends StatefulWidget {
+class MouseRegionWidget extends ConsumerWidget {
   final Widget child;
-  final AnimaController control;
-  const MouseRegionWidget({
-    super.key,
-    required this.child,
-    required this.control,
-  });
+  const MouseRegionWidget({super.key, required this.child});
 
   @override
-  State<MouseRegionWidget> createState() => _MouseRegionWidgetState();
-}
-
-class _MouseRegionWidgetState extends State<MouseRegionWidget> {
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final control = ref.read(videoAnimationControllerProvider);
     return Container(
       color: const Color.fromARGB(64, 211, 201, 201),
       height: 40,
       child: MouseRegion(
         cursor: SystemMouseCursors.click, // 改变光标样式
         onEnter: (_) {
-          widget.control.enterControls();
+          control.enterControls();
         },
         onExit: (_) {
-          widget.control.exitControls();
+          control.exitControls();
         },
-        child: widget.child,
+        child: child,
       ),
     );
-  }
-}
-
-/// 动画控制器管理类
-/// 用于统一管理控制栏的淡入淡出动画
-class AnimaController {
-  /// 动画控制器
-  late final AnimationController _controller;
-
-  /// 透明度动画
-  late final Animation<double> _opacityAnimation;
-
-  /// 当前是否可见
-  bool _isVisible = true;
-
-  bool _autoHide = true;
-  VoidCallback? _onAutoHide;
-
-  /// 获取当前透明度动画
-  Animation<double> get opacityAnimation => _opacityAnimation;
-
-  /// 获取当前是否可见
-  bool get isVisible => _isVisible;
-
-  /// 构造函数
-  AnimaController({
-    required TickerProvider vsync,
-    double animationBegin = 0,
-    autoHide = false,
-    VoidCallback? onAutoHide,
-    Duration duration = const Duration(milliseconds: 300),
-  }) {
-    // 在构造函数体内初始化，而不是初始化列表
-    _controller = AnimationController(vsync: vsync, duration: duration);
-    _opacityAnimation = Tween<double>(
-      begin: -animationBegin,
-      end: 1,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-
-    _autoHide = autoHide;
-    _onAutoHide = onAutoHide;
-
-    // 初始状态为可见
-    _controller.value = 1.0;
-  }
-
-  /// 显示控制栏
-  void showControls() {
-    if (!_isVisible) {
-      _controller.forward();
-      _isVisible = true;
-      if (_autoHide) {
-        autoHide(onAutoHide: _onAutoHide);
-      }
-    }
-  }
-
-  void enterControls() {
-    _autoHideTimer?.cancel();
-    if (!_isVisible) {
-      _controller.forward();
-      _isVisible = true;
-    }
-  }
-
-  void exitControls() {
-    if (_autoHide) {
-      autoHide(onAutoHide: _onAutoHide);
-    }
-  }
-
-  /// 隐藏控制栏
-  void hideControls() {
-    if (_isVisible) {
-      _controller.reverse();
-      _isVisible = false;
-    }
-  }
-
-  /// 切换控制栏显示/隐藏
-  void toggleControls() {
-    if (_isVisible) {
-      hideControls();
-    } else {
-      showControls();
-    }
-  }
-
-  /// 重置动画（用于视频切换或重新初始化）
-  void reset() {
-    _controller.stop();
-    _controller.value = 1.0;
-    _isVisible = true;
-  }
-
-  /// 设置自动隐藏定时器
-  /// [duration] 自动隐藏前等待时间，默认3秒
-  /// [onAutoHide] 自动隐藏时的回调
-  void autoHide({
-    Duration duration = const Duration(seconds: 3),
-    VoidCallback? onAutoHide,
-  }) {
-    // 取消之前的定时器
-    _autoHideTimer?.cancel();
-
-    // 如果当前是可见状态，则启动新的定时器
-    if (_isVisible) {
-      _autoHideTimer = Timer(duration, () {
-        if (_isVisible) {
-          hideControls();
-          onAutoHide?.call();
-        }
-      });
-    }
-  }
-
-  Timer? _autoHideTimer;
-
-  /// 取消自动隐藏定时器
-  void cancelAutoHide() {
-    _autoHideTimer?.cancel();
-    _autoHideTimer = null;
-  }
-
-  /// 显示控制栏并重置自动隐藏
-  void showWithAutoHide({
-    Duration autoHideDuration = const Duration(seconds: 3),
-    VoidCallback? onAutoHide,
-  }) {
-    showControls();
-    autoHide(duration: autoHideDuration, onAutoHide: onAutoHide);
-  }
-
-  /// 释放资源
-  void dispose() {
-    cancelAutoHide();
-    _controller.dispose();
   }
 }
 

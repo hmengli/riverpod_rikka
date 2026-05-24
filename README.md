@@ -30,4 +30,5 @@ git update-index --assume-unchanged pubspec.lock
 $env:CXXFLAGS = "-D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS"
 flutter run -d windows
 dart run build_runner build
+dart run build_runner watch --delete-conflicting-outputs
 
