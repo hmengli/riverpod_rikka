@@ -74,6 +74,7 @@ class ParserEntity {
   DateTime createdAt;
 
   String cookie;
+  VideoType? videoType;
 
   ParserEntity({
     this.id = 0,
@@ -94,6 +95,7 @@ class ParserEntity {
     this.verifyInput = '',
     this.verifySubmit = '',
     this.cookie = '',
+    this.videoType,
 
     required this.createdAt,
   });

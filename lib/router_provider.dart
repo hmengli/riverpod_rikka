@@ -9,9 +9,11 @@ import 'package:rikka/screens/schedule/detail/detail_page.dart';
 import 'package:rikka/screens/home/home_page.dart';
 import 'package:rikka/screens/login_screen.dart';
 import 'package:rikka/screens/settings/parser/parser_entity.dart';
-import 'package:rikka/screens/settings/parser/parser_page.dart';
+import 'package:rikka/screens/settings/parser/parser_view_page.dart';
 import 'package:rikka/screens/schedule/detail/video/playlist_page.dart';
 import 'package:rikka/screens/schedule/schedule_page.dart';
+import 'package:rikka/screens/settings/parser/tests/parser_test_page.dart';
+import 'package:rikka/screens/settings/parser/parser_upsert_page.dart';
 import 'package:rikka/screens/settings/settings_page.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:transit_kit/transit_kit.dart';
@@ -24,6 +26,7 @@ class AuthStateListenable extends ChangeNotifier {
   AuthStateListenable(this.ref) {
     // 监听认证 Provider 的状态变化
     ref.listen(authProvider, (previous, next) {
+      print('listen: $previous -> $next');
       // 当状态变化时，通知 GoRouter 重新执行 redirect
       notifyListeners();
     });
@@ -48,8 +51,10 @@ GoRouter goRouter(Ref ref) {
     refreshListenable: authStateListenable,
     // 初始页面，可以是一个加载页
     initialLocation: '/splash',
+    observers: [LoggingNavigatorObserver()],
     // 路由守卫的核心逻辑
     redirect: (context, state) {
+      print('Redirect: ${state.uri.path}'); // 看看实际路径
       // 使用 ref.read 单次获取状态，避免重建
       final authState = ref.read(authProvider);
 
@@ -90,7 +95,7 @@ class DetailsRoute extends GoRouteData with $DetailsRoute {
 
   @override
   Widget build(BuildContext context, GoRouterState state) =>
-      DetailPage(entity: $extra!);
+      DetailPage(comics: $extra!);
 }
 
 @TypedGoRoute<VideoPlayerRoute>(path: '/videoplayer')
@@ -132,12 +137,7 @@ class SettingsBranch extends StatefulShellBranchData {
       routes: [TypedGoRoute<ScheduleRoute>(path: '/schedule')],
     ),
     TypedStatefulShellBranch<SettingsBranch>(
-      routes: [
-        TypedGoRoute<SettingsRoute>(
-          path: '/settings',
-          routes: [TypedGoRoute<ParserRoute>(path: '/parser')],
-        ),
-      ],
+      routes: [TypedGoRoute<SettingsRoute>(path: '/settings')],
     ),
   ],
 )
@@ -180,11 +180,40 @@ class SettingsRoute extends GoRouteData with $SettingsRoute {
   Widget build(BuildContext context, GoRouterState state) => SettingsPage();
 }
 
+@TypedGoRoute<ParserRoute>(
+  path: '/parser/:videoType',
+  routes: [
+    TypedGoRoute<ParserUpsertRoute>(path: 'upsert'),
+    TypedGoRoute<ParserTestRoute>(path: 'tests'),
+  ],
+)
 class ParserRoute extends GoRouteData with $ParserRoute {
-  const ParserRoute();
+  const ParserRoute({required this.videoType});
+  final VideoType videoType;
+
   @override
   Widget build(BuildContext context, GoRouterState state) =>
-      const ParserPage(videoType: VideoType.comics);
+      ParserPage(videoType: videoType);
+}
+
+class ParserUpsertRoute extends GoRouteData with $ParserUpsertRoute {
+  const ParserUpsertRoute({this.$extra, required this.videoType});
+  final VideoType videoType;
+  final ParserEntity? $extra;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      ParserUpsertPage(model: $extra, videoType: videoType);
+}
+
+class ParserTestRoute extends GoRouteData with $ParserTestRoute {
+  const ParserTestRoute({required this.videoType, this.$extra});
+  final VideoType videoType;
+  final ParserEntity? $extra;
+  @override
+  Widget build(BuildContext context, GoRouterState state) {
+    return ParserTestPage(entity: $extra);
+  }
 }
 
 // ============= 2. 带底部导航栏的 Scaffold（必须在使用前定义） =============
@@ -244,4 +273,32 @@ final List<TransitType> interestingTransitions = [
 TransitType getRandomTransition() {
   final random = Random();
   return interestingTransitions[random.nextInt(interestingTransitions.length)];
+}
+
+class LoggingNavigatorObserver extends NavigatorObserver {
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    _log(route, 'push');
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    _log(route, 'pop');
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    if (newRoute != null) _log(newRoute, 'replace');
+  }
+
+  void _log(Route<dynamic> route, String action) {
+    // 获取当前路由的完整路径（仅适用于 GoRouterState 等）
+    final settings = route.settings;
+    print('🔗 Route $action: ${settings.name ?? settings.arguments}');
+    // 如果使用 GoRouter，可以强制转换获取更多信息
+    if (route is GoRoute) {
+      // 也可以拿到当前 location
+      print('   Location: ${route}');
+    }
+  }
 }

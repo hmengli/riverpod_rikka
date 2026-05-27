@@ -55,7 +55,8 @@ Future<void> main() async {
    */
   await Hive.initFlutter();
   Hive.registerAdapter(ParserEntityAdapter()); // 注册适配器
-  await Hive.openBox<ParserEntity>('configsBox');
+  await Hive.openBox<ParserEntity>('comicsBox');
+  await Hive.openBox<ParserEntity>('movieBox');
 
   runApp(const ProviderScope(child: AppWidget()));
   // runApp(MaterialApp(home: MyCaptchaPage()));

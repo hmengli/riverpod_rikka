@@ -3,7 +3,7 @@ import 'package:html/parser.dart' as parser;
 import 'package:http/http.dart' as http;
 import 'package:rikka/utils/logger.dart';
 
-import 'parser_entity.dart';
+import '../parser_entity.dart';
 
 /// 步骤执行函数签名：
 ///   - 输入：前一步的结果（第一步为 null）
@@ -11,9 +11,7 @@ import 'parser_entity.dart';
 ///   - 输出：Future<dynamic> 当前步骤的结果
 typedef StepAction = Future<dynamic> Function(dynamic previousResult);
 
-// 定义带参数的 family provider
 final parserServiceProvider = Provider<ParserService>((ref) {
-  Log.d('parserServiceProvider');
   return ParserService();
 });
 

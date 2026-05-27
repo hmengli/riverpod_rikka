@@ -17,9 +17,9 @@ class CookieSilentService {
   late Completer<void> _pageLoadCompleter = Completer();
   late Completer<Uint8List?> _capturedCompleter = Completer();
   late WebUri webUri;
-  late Uint8List? capturedCaptchaBytes;
+  //   late Uint8List? capturedCaptchaBytes;
   late HeadlessInAppWebView _headlessWebView;
-  late InAppWebViewController _webViewController;
+  //   late InAppWebViewController _webViewController;
 
   final Completer<InAppWebViewController> _controllerCompleter = Completer();
   Future<InAppWebViewController> get controllerReady =>
@@ -29,8 +29,6 @@ class CookieSilentService {
 
   Future<void> initWebView() async {
     if (_initialized) return;
-    // if (_controllerCompleter.isCompleted) return;
-
     try {
       _headlessWebView = HeadlessInAppWebView(
         initialSettings: InAppWebViewSettings(
@@ -42,7 +40,6 @@ class CookieSilentService {
           userAgent: Utils.getRandomUA(),
         ),
         onWebViewCreated: (controller) {
-          _webViewController = controller;
           controller.addJavaScriptHandler(
             handlerName: 'toFlutter',
             callback: (data) {
@@ -88,16 +85,17 @@ class CookieSilentService {
     }
   }
 
-  Future<Uint8List?> captureScreenshot(String url) async {
+  Future<Uint8List?> captureScreenshot(String url, String img) async {
     try {
       final controller = await controllerReady;
       webUri = WebUri(url);
-      final currentUrl = await _webViewController.getUrl();
+      final currentUrl = await controller.getUrl();
       if (currentUrl != null && currentUrl.path != webUri.path) {
         await controller.loadUrl(urlRequest: URLRequest(url: webUri));
         await _pageLoadCompleter.future.timeout(Duration(seconds: 10));
       }
-      return null;
+      await Future.delayed(Duration(seconds: 1));
+      return getScreenshot(img);
     } catch (e) {
       Log.e('获取验证码失败: $e');
       return null;
@@ -204,10 +202,10 @@ class CookieSilentService {
       })();
       """;
       controller.evaluateJavascript(source: submitJs);
-      capturedCaptchaBytes = await _capturedCompleter.future.timeout(
+      return await _capturedCompleter.future.timeout(
         Duration(seconds: 10),
+        onTimeout: () => null,
       );
-      return capturedCaptchaBytes;
     } catch (e) {
       Log.e('获取验证码失败: $e');
       return null;
@@ -262,13 +260,37 @@ class CookieSilentService {
         controller.evaluateJavascript(source: submitJs);
         await _pageLoadCompleter.future.timeout(Duration(seconds: 5));
       }
-      final currentUrl = await _webViewController.getUrl();
+      final currentUrl = await controller.getUrl();
       final cookies = await _cookieManager.getCookies(url: currentUrl!);
       return cookies.map((c) => '${c.name}=${c.value}').join('; ');
     } catch (e) {
       Log.e('submitCaptcha: $e');
       return null;
     }
+  }
+
+  Future<String> checkCookieExpiry() async {
+    final controller = await controllerReady;
+    final url = await controller.getUrl();
+    // 获取该 URL 下所有 Cookie
+    List<Cookie> cookies = await _cookieManager.getCookies(url: url!);
+    if (checkCookie(cookies)) return "";
+    return cookies.map((c) => '${c.name}=${c.value}').join('; ');
+  }
+
+  bool checkCookie(List<Cookie> cookies) {
+    final now = DateTime.now();
+    for (var cookie in cookies) {
+      Log.d('Cookie: ${cookie.name} = ${cookie.value}');
+      // 检查是否过期
+      if (cookie.expiresDate != null) {
+        final expiresAt = DateTime.fromMillisecondsSinceEpoch(
+          cookie.expiresDate!,
+        );
+        return expiresAt.isBefore(now);
+      }
+    }
+    return false;
   }
 
   void dispose() {
@@ -285,31 +307,22 @@ class CookieSilentService {
 }
 
 class CaptchaService {
-  static final String apiUrl = "http://192.168.2.3:8000/ocr/";
+  static final String apiUrl = "http://192.168.2.3:8000/ocr";
 
   static Future<String> recognizeCaptcha(Uint8List compressedBytes) async {
-    // 1. 图像预处理：压缩图片以提升传输和识别效率
-    // final compressedBytes = await _compressImage(imageFile);
-
-    // 2. 创建 multipart 请求
-    var request = http.MultipartRequest('POST', Uri.parse(apiUrl));
-    request.files.add(
-      http.MultipartFile.fromBytes(
-        'image',
-        compressedBytes,
-        filename: 'captcha.png',
-      ),
+    final String base64Image = base64Encode(compressedBytes);
+    final response = await http.post(
+      Uri.parse(apiUrl),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'image': base64Image}),
     );
-
-    // 3. 发送请求并等待响应
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode == 200) {
       // 4. 解析服务器返回的 JSON 数据
       final Map<String, dynamic> result = json.decode(response.body);
-      if (result['success']) {
-        return result['data']; // 识别出的数字字符串
+      Log.i('message: $result');
+      if (result.containsKey('result')) {
+        return result['result']; // 识别出的数字字符串
       } else {
         throw Exception('识别失败: ${result['message']}');
       }

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rikka/router_provider.dart';
+import 'package:rikka/screens/settings/parser/parser_entity.dart';
 
-class SettingsPage extends StatelessWidget {
+class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       body: Padding(
         padding: EdgeInsets.all(20),
@@ -25,79 +27,79 @@ class SettingsPage extends StatelessWidget {
                     // 所有角圆角半径为20
                     boxShadow: [BoxShadow(color: Colors.black26)],
                   ),
-                  child: Column(
-                    children: [
-                      SettingsButton(
-                        title: '播放器配置',
-                        subtitle: '播放器配置界面',
-                        onPressed: () {
-                          // Modular.to.pushNamed(
-                          //   '/main/settings/player/',
-                          //   arguments: {'title': '播放器配置'},
-                          // );
-                        },
-                        leading: Icon(Icons.settings),
-                      ),
-                      SettingsButton(
-                        title: '主题配置',
-                        subtitle: '主题配置界面',
-                        onPressed: () {
-                          // Modular.to.pushNamed(
-                          //   '/main/settings/theme/',
-                          //   arguments: {'title': '主题配置'},
-                          // );
-                        },
-                        leading: Icon(Icons.settings),
-                      ),
-                      SettingsButton(
-                        title: '配置界面',
-                        subtitle: '主题配置界面',
-                        onPressed: () {},
-                        leading: Icon(Icons.settings),
-                      ),
-                      SettingsButton(
-                        title: '动漫网配置',
-                        subtitle: '规则配置界面',
-                        onPressed: () {
-                          context.push('/settings/parser');
-
-                          // Modular.to.pushNamed(
-                          //   '/main/settings/parser/',
-                          //   arguments: VideoType.comics,
-                          // );
-                        },
-                        leading: Icon(Icons.settings),
-                      ),
-                      SettingsButton(
-                        title: '影视网配置',
-                        subtitle: '规则配置界面',
-                        onPressed: () {
-                          // Modular.to.pushNamed(
-                          //   '/main/settings/parser/',
-                          //   arguments: VideoType.movie,
-                          // );
-                        },
-                        leading: Icon(Icons.settings),
-                      ),
-                      SettingsButton(
-                        title: '云端配置',
-                        subtitle: '云端同步界面',
-                        // onPressed: () {
-                        //   Modular.to.pushNamed(
-                        //     '/main/settings/cloud/',
-                        //     arguments: {'title': '云端同步'},
-                        //   );
-                        // },
-                        leading: Icon(Icons.settings),
-                      ),
-                    ],
-                  ),
+                  child: ColumnWidget(),
                 ),
               ],
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class ColumnWidget extends StatelessWidget {
+  const ColumnWidget({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SettingsButton(
+          title: '播放器配置',
+          subtitle: '播放器配置界面',
+          onPressed: () {
+            // Modular.to.pushNamed(
+            //   '/main/settings/player/',
+            //   arguments: {'title': '播放器配置'},
+            // );
+          },
+          leading: Icon(Icons.settings),
+        ),
+        SettingsButton(
+          title: '主题配置',
+          subtitle: '主题配置界面',
+          onPressed: () {
+            // Modular.to.pushNamed(
+            //   '/main/settings/theme/',
+            //   arguments: {'title': '主题配置'},
+            // );
+          },
+          leading: Icon(Icons.settings),
+        ),
+        SettingsButton(
+          title: '配置界面',
+          subtitle: '主题配置界面',
+          onPressed: () {},
+          leading: Icon(Icons.settings),
+        ),
+        SettingsButton(
+          title: '配置',
+          subtitle: '动漫规则配置界面',
+          onPressed: () {
+            ParserRoute(videoType: VideoType.comics).push(context);
+          },
+          leading: Icon(Icons.settings),
+        ),
+        SettingsButton(
+          title: '配置',
+          subtitle: '影视规则配置界面',
+          onPressed: () {
+            ParserRoute(videoType: VideoType.movie).push(context);
+          },
+          leading: Icon(Icons.settings),
+        ),
+        SettingsButton(
+          title: '云端配置',
+          subtitle: '云端同步界面',
+          // onPressed: () {
+          //   Modular.to.pushNamed(
+          //     '/main/settings/cloud/',
+          //     arguments: {'title': '云端同步'},
+          //   );
+          // },
+          leading: Icon(Icons.settings),
+        ),
+      ],
     );
   }
 }

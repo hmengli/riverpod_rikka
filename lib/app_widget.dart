@@ -64,10 +64,10 @@ class _AppWidgetState extends ConsumerState<AppWidget>
         Log.d('应用进入后台，立刻保存重要数据');
         break;
       case AppLifecycleState.resumed:
-        Log.d('应用回到前台');
+        // Log.d('应用回到前台');
         break;
       case AppLifecycleState.inactive:
-        Log.d('应用失去焦点');
+        // Log.d('应用失去焦点');
         break;
       default:
         break;

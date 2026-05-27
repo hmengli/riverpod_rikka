@@ -5,69 +5,52 @@ import 'package:rikka/screens/schedule/comics_entity.dart';
 import 'package:rikka/screens/settings/parser/parser_entity.dart';
 import 'package:rikka/screens/settings/parser/parser_provide.dart';
 import 'package:rikka/screens/schedule/schedule_page.dart';
+import 'package:rikka/screens/settings/parser/tests/parser_test_provide.dart';
+import 'package:rikka/utils/dialog.dart';
 import 'package:rikka/utils/logger.dart';
 
-import '../../../../utils/dialog.dart';
 import 'detail_provider.dart';
 import 'silent_cookie_service.dart';
 
 class DetailPage extends ConsumerStatefulWidget {
-  final ComicsEntity entity;
-  const DetailPage({super.key, required this.entity});
+  final ComicsEntity comics;
+  const DetailPage({super.key, required this.comics});
 
   @override
   ConsumerState<DetailPage> createState() => _DetailPageState();
 }
 
 class _DetailPageState extends ConsumerState<DetailPage> {
-  List<ParserEntity> configs = [];
-
   @override
   Widget build(BuildContext context) {
-    final configs = ref.watch(parserListProvider).value;
     ref.watch(cookieProvider);
     final double maxWidth = 200;
     final double maxHeight = 300;
-    ComicsEntity entity = widget.entity;
+    ComicsEntity comics = widget.comics;
     return Scaffold(
-      appBar: AppBar(title: Text(entity.vodName)),
+      appBar: AppBar(title: Text(comics.vodName)),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Hero(
-              tag: entity.vodId,
+              tag: comics.vodId,
               child: Image.network(
-                entity.vodPic,
+                comics.vodPic,
                 width: maxWidth,
                 height: maxHeight,
               ),
             ),
-            Text('当前详情ID: ${entity.vodId}'),
-            Text('附加数据: ${entity.vodName}'),
+            Text('当前详情ID: ${comics.vodId}'),
+            Text('附加数据: ${comics.vodName}'),
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: () async {
                 // 通过动态路由跳转到播放页
-                DetailDialog.bottomDialog(
-                  context,
-                  TabBarWidget(
-                    isScrollable: true,
-                    tabList: configs!,
-                    tabs: (l) => l.map((element) {
-                      return Tab(
-                        text: element.name,
-                        icon: Icon(Icons.recommend),
-                      );
-                    }).toList(),
-                    children: configs.map((element) {
-                      return RecommendTab(
-                        comics: widget.entity,
-                        parser: element,
-                      );
-                    }).toList(),
-                  ),
-                );
+                // DetailDialog.bottomDialog(
+                //   context,
+                //   // ParserEntityTabview(comics: comics),
+                // );
               },
               child: Text('播放'),
             ),
@@ -77,6 +60,33 @@ class _DetailPageState extends ConsumerState<DetailPage> {
     );
   }
 }
+
+// class ParserEntityTabview extends ConsumerWidget {
+//   final ComicsEntity comics;
+//   const ParserEntityTabview({super.key, required this.comics});
+
+//   @override
+//   Widget build(BuildContext context, WidgetRef ref) {
+//     final configs = ref.watch(parserListProvider);
+//     return configs.when(
+//       data: (data) {
+//         return TabBarWidget(
+//           isScrollable: true,
+//           tabList: data,
+//           tabs: (l) => l.map((element) {
+//             return Tab(text: element.name, icon: Icon(Icons.recommend));
+//           }).toList(),
+//           children: data.map((element) {
+//             return RecommendTab(comics: comics, parser: element);
+//           }).toList(),
+//         );
+//       },
+//       error: (error, stackTrace) => Center(child: Text("ERROR: 网络错误")),
+//       loading: () => Center(child: CircularProgressIndicator()),
+//     );
+//     // return
+//   }
+// }
 
 class RecommendTab extends ConsumerStatefulWidget {
   final ComicsEntity comics;
@@ -93,7 +103,6 @@ class _RecommendTabState extends ConsumerState<RecommendTab> {
   Future<void> _parserCookie() async {
     ref.read(isCookieProvider.notifier).setIsCookie(false);
     final parser = widget.parser;
-    final comics = widget.comics;
     final cookie = ref
         .read(cookieProvider.notifier)
         .parserCookie(
@@ -108,7 +117,6 @@ class _RecommendTabState extends ConsumerState<RecommendTab> {
       }
     });
     await Future.delayed(Duration(seconds: 3));
-    ref.read(detailListProvider.notifier).detailList(parser, comics.vodName);
   }
 
   @override
@@ -118,89 +126,99 @@ class _RecommendTabState extends ConsumerState<RecommendTab> {
     String step1Url = parser.searchUrl;
     step1Url = step1Url.replaceAll('@keyword', comics.vodName);
 
-    final imgCaptcha = ref.watch(cookieProvider);
-    final notifier = ref.read(cookieProvider.notifier);
     final isCookie = ref.watch(isCookieProvider);
-    final detailList = ref.watch(detailListProvider);
 
-    Log.i('showCode: ${parser.cookie}');
-    if (!isCookie) {
-      if (parser.verify && parser.cookie.isEmpty) {
+    if (parser.verify) {
+      //如果需要获取coolie,获取cookie
+      if (isCookie) return getCookie();
+      if (parser.cookie.isEmpty) {
+        //1.如果需要验证，而且coolie为空，先获取cookie
         return ElevatedButton(
           onPressed: () {
-            notifier.loadingPage(step1Url);
+            final notifier = ref.read(cookieProvider.notifier);
+            notifier.loadingPage(step1Url, parser.verifyPng);
             ref.read(isCookieProvider.notifier).setIsCookie(true);
           },
           child: Text('获取验证码'),
         );
       }
-    } else {
-      return Row(
-        children: [
-          Padding(
-            padding: EdgeInsets.all(20),
-            child: ElevatedButton(
-              onPressed: () => notifier.setScreenshot(parser.verifyPng),
-              child: imgCaptcha != null
-                  ? Image.memory(imgCaptcha)
-                  : CircularProgressIndicator(),
-            ),
-          ),
-          Expanded(
-            child: TextField(
-              autofocus: true,
-              decoration: InputDecoration(hintText: "验证码"),
-              onChanged: (value) {
-                showCode = value;
-              },
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final code = await CaptchaService.recognizeCaptcha(imgCaptcha!);
-              Log.i('showCode: $code');
-              setState(() {
-                showCode = code;
-              });
-            },
-            child: Text('解析'),
-          ),
-          ElevatedButton(onPressed: _parserCookie, child: Text('提交')),
-        ],
-      );
     }
 
-    if (detailList.isEmpty) {
-      return Center(
-        child: ListTile(
-          title: Text('NO Data'),
-          trailing: ElevatedButton(
-            onPressed: () {
-              final notifier = ref.read(detailListProvider.notifier);
-              notifier.detailList(parser, comics.vodName);
-            },
-            child: Text('re'),
+    return DetailListWidget(comics: comics, parser: parser);
+  }
+
+  Widget getCookie() {
+    final parser = widget.parser;
+    final imgCaptcha = ref.watch(cookieProvider);
+    final notifier = ref.read(cookieProvider.notifier);
+    return Row(
+      children: [
+        Padding(
+          padding: EdgeInsets.all(20),
+          child: ElevatedButton(
+            onPressed: () => notifier.setScreenshot(parser.verifyPng),
+            child: imgCaptcha != null
+                ? Image.memory(imgCaptcha)
+                : CircularProgressIndicator(),
           ),
         ),
-      );
-    } else {
-      return ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: detailList.length,
-        itemBuilder: (context, index) {
-          DetailEntity token = detailList[index];
-          return ListTile(
-            leading: CircleAvatar(child: Text('${index + 1}')),
-            title: Text(token.title),
-            trailing: const Icon(Icons.favorite_border),
-            onTap: () {
-              VideoPlayerRoute($extra: token).push(context);
-              // Navigator.pop(context);
+        Expanded(
+          child: TextField(
+            autofocus: true,
+            decoration: InputDecoration(hintText: "验证码"),
+            onChanged: (value) {
+              showCode = value;
             },
-          );
-        },
-      );
-    }
+          ),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            final code = await CaptchaService.recognizeCaptcha(imgCaptcha!);
+            showCode = code;
+          },
+          child: Text('解析'),
+        ),
+        ElevatedButton(onPressed: _parserCookie, child: Text('提交')),
+      ],
+    );
+  }
+}
+
+class DetailListWidget extends ConsumerWidget {
+  final ComicsEntity comics;
+  final ParserEntity parser;
+  const DetailListWidget({
+    super.key,
+    required this.comics,
+    required this.parser,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final detailList = ref.watch(detailListProvider(parser, comics.vodName));
+    return detailList.when(
+      data: (data) {
+        if (data.isEmpty) return Center(child: Text('No Data'));
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: data.length,
+          itemBuilder: (context, index) {
+            DetailEntity token = data[index];
+            return ListTile(
+              leading: CircleAvatar(child: Text('${index + 1}')),
+              title: Text(token.title),
+              trailing: const Icon(Icons.favorite_border),
+              onTap: () {
+                VideoPlayerRoute($extra: token).push(context);
+                // Navigator.pop(context);
+              },
+            );
+          },
+        );
+      },
+      error: (e, t) => Center(child: Text('Error: $e')),
+      loading: () => Center(child: CircularProgressIndicator()),
+    );
   }
 }
 
