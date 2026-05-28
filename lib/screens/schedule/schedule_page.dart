@@ -1,10 +1,14 @@
+import 'package:browser_headers/browser_headers.dart';
+import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rikka/router_provider.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:rikka/screens/schedule/schedule_provider.dart';
+import 'package:rikka/utils/logger.dart';
 import 'package:rikka/utils/utils.dart';
 
 import 'comics_entity.dart';
+import 'schedule_router.dart';
 
 class SchedulePage extends StatelessWidget {
   const SchedulePage({super.key});
@@ -36,10 +40,8 @@ class _TabBarViewWidgetState extends ConsumerState<TabBarViewWidget> {
   Widget build(BuildContext context) {
     final futureData = ref.watch(fetchDataProvider(weekday: widget.weekday));
     double width = MediaQuery.of(context).size.width;
-    if (futureData.isLoading) {
-      return Center(child: CircularProgressIndicator());
-    } else {
-      return Container(
+    return futureData.when(
+      data: (data) => Container(
         padding: EdgeInsets.all(20),
         child: GridView.builder(
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -48,13 +50,15 @@ class _TabBarViewWidgetState extends ConsumerState<TabBarViewWidget> {
             mainAxisSpacing: 20, // 水平间距
             childAspectRatio: 1.618, // 适合图片的宽高比
           ),
-          itemCount: futureData.value?.length,
+          itemCount: data.length,
           itemBuilder: (context, index) {
-            return ComicsCardH(comics: futureData.value![index]);
+            return ComicsCardH(comics: data[index]);
           },
         ),
-      );
-    }
+      ),
+      error: (e, _) => Center(child: Text("Error: $e")),
+      loading: () => Center(child: CircularProgressIndicator()),
+    );
   }
 }
 
@@ -73,6 +77,14 @@ class ComicsCardH extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Log.i('build: ${comics.vodPic}');
+    final httpHeaders = BrowserHeaders.generate();
+    httpHeaders.addAll({
+      'Referer': 'https://www.gugu3.com/index.php/label/weekday.html',
+      'Accept':
+          'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+    });
+    Log.i('build: $httpHeaders');
     return Card(
       elevation: 0,
       clipBehavior: Clip.antiAlias,
@@ -91,17 +103,28 @@ class ComicsCardH extends StatelessWidget {
                 tag: comics.vodId,
                 child: AspectRatio(
                   aspectRatio: 0.7, // 16:9 比例
-                  child: Image.network(
-                    comics.vodPic,
-                    fit: BoxFit.cover,
-                    frameBuilder:
-                        (context, child, frame, wasSynchronouslyLoaded) {
-                          if (frame == null) {
-                            return Center(child: CircularProgressIndicator());
-                          }
-                          return child;
-                        },
+                  child: CachedNetworkImage(
+                    imageUrl: comics.vodPic,
+                    httpHeaders: httpHeaders,
+                    placeholder: (context, url) =>
+                        const CircularProgressIndicator(),
+                    unsupportedImageBuilder: (context, url, bytes) =>
+                        SvgPicture.memory(bytes, fit: BoxFit.contain),
+                    errorBuilder: (context, error, stackTrace) =>
+                        const Icon(Icons.error),
                   ),
+
+                  // Image.network(
+                  //   comics.vodPic,
+                  //   fit: BoxFit.cover,
+                  //   frameBuilder:
+                  //       (context, child, frame, wasSynchronouslyLoaded) {
+                  //         if (frame == null) {
+                  //           return Center(child: CircularProgressIndicator());
+                  //         }
+                  //         return child;
+                  //       },
+                  // ),
                 ),
               ),
             ),
@@ -137,11 +160,11 @@ class ComicsCardH extends StatelessWidget {
     );
   }
 
-  Widget getText(BuildContext context, String title) {
+  Widget getText(BuildContext context, String? title) {
     return Padding(
       padding: const EdgeInsets.all(2),
       child: Text(
-        title,
+        title ?? '',
         textAlign: TextAlign.start,
         style: Theme.of(context).textTheme.bodySmall,
         maxLines: 1,

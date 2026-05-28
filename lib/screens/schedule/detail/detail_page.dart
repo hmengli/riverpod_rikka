@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rikka/router_provider.dart';
 import 'package:rikka/screens/schedule/comics_entity.dart';
 import 'package:rikka/screens/settings/parser/parser_entity.dart';
-import 'package:rikka/screens/settings/parser/parser_provide.dart';
-import 'package:rikka/screens/schedule/schedule_page.dart';
 import 'package:rikka/screens/settings/parser/tests/parser_test_provide.dart';
-import 'package:rikka/utils/dialog.dart';
 import 'package:rikka/utils/logger.dart';
 
+import '../schedule_router.dart';
 import 'detail_provider.dart';
 import 'silent_cookie_service.dart';
 
@@ -210,7 +207,6 @@ class DetailListWidget extends ConsumerWidget {
               trailing: const Icon(Icons.favorite_border),
               onTap: () {
                 VideoPlayerRoute($extra: token).push(context);
-                // Navigator.pop(context);
               },
             );
           },

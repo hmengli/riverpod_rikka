@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rikka/router_provider.dart';
 import 'package:rikka/screens/settings/parser/parser_entity.dart';
+
+import 'settings_route.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -58,12 +59,7 @@ class ColumnWidget extends StatelessWidget {
         SettingsButton(
           title: '主题配置',
           subtitle: '主题配置界面',
-          onPressed: () {
-            // Modular.to.pushNamed(
-            //   '/main/settings/theme/',
-            //   arguments: {'title': '主题配置'},
-            // );
-          },
+          onPressed: () => ThemeRoute().push(context),
           leading: Icon(Icons.settings),
         ),
         SettingsButton(
@@ -91,12 +87,7 @@ class ColumnWidget extends StatelessWidget {
         SettingsButton(
           title: '云端配置',
           subtitle: '云端同步界面',
-          // onPressed: () {
-          //   Modular.to.pushNamed(
-          //     '/main/settings/cloud/',
-          //     arguments: {'title': '云端同步'},
-          //   );
-          // },
+          onPressed: () => CloudRoute().push(context),
           leading: Icon(Icons.settings),
         ),
       ],

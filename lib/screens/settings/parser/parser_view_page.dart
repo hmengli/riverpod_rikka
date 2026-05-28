@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rikka/router_provider.dart';
 
+import '../settings_route.dart';
 import 'parser_entity.dart';
 import 'parser_provide.dart';
 

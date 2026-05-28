@@ -7,9 +7,20 @@ part 'theme_provider.g.dart';
 class ThemeNotifier extends _$ThemeNotifier {
   @override
   ThemeMode build() => ThemeMode.system;
+
   void setThemeMode(ThemeMode mode) {
     if (state == mode) return;
     state = mode;
+  }
+}
+
+@riverpod
+class ThemeIndexNotifier extends _$ThemeIndexNotifier {
+  @override
+  int build() => 0;
+
+  void setSelectedIndex(int newValue) {
+    state = newValue;
   }
 }
 

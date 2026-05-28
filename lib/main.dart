@@ -2,12 +2,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:rikka/app_widget.dart';
 import 'package:rikka/screens/settings/parser/parser_entity.dart';
 import 'package:rikka/utils/logger.dart';
 import 'package:rikka/utils/utils.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:window_manager/window_manager.dart';
 
 Future<void> main() async {
@@ -39,7 +41,7 @@ Future<void> main() async {
    */
   await Log.init(
     LogConfig(
-      level: LogLevel.debug, // 显示 debug 及以上
+      level: LogLevel.info, // 显示 debug 及以上
       enableConsole: true, // 输出到控制台
       enableFile: true, // 同时写入文件
       maxFileCount: 5, // 最多保留 5 个日志文件
@@ -57,6 +59,23 @@ Future<void> main() async {
   Hive.registerAdapter(ParserEntityAdapter()); // 注册适配器
   await Hive.openBox<ParserEntity>('comicsBox');
   await Hive.openBox<ParserEntity>('movieBox');
+
+  /*
+   * GetStorage  本地键值对初始化
+   */
+  await GetStorage.init();
+  final box = GetStorage();
+  String? url = box.read('supabaseUrl');
+  String? anonKey = box.read('supabaseAnonKey');
+
+  /*
+   * Supabase  云数据库初始化
+   */
+  if (url == null || anonKey == null) {
+    url = 'https://iyausllaoabjijotcqsl.supabase.co';
+    anonKey = 'sb_publishable_-77deP0oUUadeA7_77Dw3A_MOA_rdDl';
+  }
+  await Supabase.initialize(url: url, anonKey: anonKey);
 
   runApp(const ProviderScope(child: AppWidget()));
   // runApp(MaterialApp(home: MyCaptchaPage()));

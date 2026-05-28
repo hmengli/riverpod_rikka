@@ -1,9 +1,11 @@
 class ComicsEntity {
   static List<String> list = [
     'url',
-    'vod_idvod_name',
+    'vod_id',
+    'vod_name',
     'vod_pic',
     'vod_pic_thumb',
+    'vod_class',
     'vod_actor',
     'vod_tag',
     'vod_douban_score',
@@ -16,42 +18,49 @@ class ComicsEntity {
   int vodId;
   String vodName;
   String vodPic;
-  String vodPicThumb;
-  String vodActor;
-  String vodTag;
-  String vodDoubanScore;
-  String vodRemarks;
-  String vodSerial;
-  String vodBlurb;
+  String? vodPicThumb;
+  String? vodClass;
+  String? vodActor;
+  String? vodTag;
+  String? vodScore;
+  String? vodDoubanScore;
+  String? vodRemarks;
+  String? vodSerial;
+  String? vodBlurb;
 
   ComicsEntity({
     required this.url,
     required this.vodId,
     required this.vodName,
     required this.vodPic,
-    required this.vodPicThumb,
-    required this.vodActor,
-    required this.vodTag,
-    required this.vodDoubanScore,
-    required this.vodRemarks,
-    required this.vodSerial,
-    required this.vodBlurb,
+    this.vodPicThumb,
+    this.vodClass,
+    this.vodActor,
+    this.vodTag,
+    this.vodScore,
+    this.vodDoubanScore,
+    this.vodRemarks,
+    this.vodSerial,
+    this.vodBlurb,
   });
 
   factory ComicsEntity.fromJson(Map<String, dynamic> json) {
     return ComicsEntity(
-      url: json['url'] as String,
+      url:
+          json['url'] ??
+          'https://www.gugu3.com/index.php/vod/search/wd/${json['vod_id']}.html',
       vodId: json['vod_id'] as int,
       vodName: json['vod_name'] as String,
-      vodPic: json['vod_pic'] as String,
-      vodPicThumb: json['vod_pic_thumb'] as String,
-      vodActor: json['vod_actor'] as String,
-      vodTag: json['vod_tag'] as String,
-      // vodScore: json['vod_score'],
-      vodDoubanScore: json['vod_douban_score'] as String,
-      vodRemarks: json['vod_remarks'] as String,
-      vodSerial: json['vod_serial'] as String,
-      vodBlurb: json['vod_blurb'] as String,
+      vodPic: json['vod_pic'].toString().replaceAll('\\', ''),
+      vodPicThumb: json['vod_pic_thumb'],
+      vodClass: json['vod_class'],
+      vodActor: json['vod_actor'],
+      vodTag: json['vod_tag'],
+      vodScore: json['vod_score'],
+      vodDoubanScore: json['vod_douban_score'],
+      vodRemarks: json['vod_remarks'],
+      vodSerial: json['vod_serial'],
+      vodBlurb: json['vod_blurb'],
     );
   }
 }

@@ -6,9 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rikka/utils/utils.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'router_provider.dart';
+import 'app_router.dart';
 import 'l10n/app_localizations.dart';
-import 'theme_provider.dart';
+import 'screens/settings/theme/theme_provider.dart';
 import 'utils/logger.dart';
 
 class AppWidget extends ConsumerStatefulWidget {
