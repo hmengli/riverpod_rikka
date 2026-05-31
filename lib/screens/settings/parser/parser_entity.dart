@@ -1,85 +1,37 @@
 import 'package:flutter/material.dart';
-import 'package:hive_ce/hive.dart';
 
-part 'parser_entity.g.dart'; // 自动生成
-
-enum VideoType { movie, comics }
-
-class DetailEntity {
-  String id;
-  String title;
-  String href;
-  String imageSrc;
-  ParserEntity parser;
-
-  DetailEntity({
-    required this.id,
-    required this.title,
-    required this.href,
-    required this.imageSrc,
-    required this.parser,
-  });
-}
-
-class ParseResult {
-  final String step1Content; // 第一步获取的原始HTML
-  final List<String> step1Items; // 第一步提取的链接/内容
-  final String step2Content; // 第二步获取的HTML（点击第一个链接）
-  final List<Map<String, String>> finalData; // 最终提取的数据
-
-  ParseResult({
-    required this.step1Content,
-    required this.step1Items,
-    required this.step2Content,
-    required this.finalData,
-  });
-}
-
-@HiveType(typeId: 0)
-class ParserEntity {
-  @HiveField(0)
-  int id;
-  @HiveField(1)
-  String name;
-  @HiveField(2)
+abstract class Entity {
   String basisUrl;
-  @HiveField(3)
+  Entity({required this.basisUrl});
+}
+
+enum VideoType { movie, comics, comicsApi, movieApi }
+
+class ParserEntity extends Entity {
+  int id;
+  String name;
   String searchUrl;
-  @HiveField(4)
   String searchHref;
-  @HiveField(5)
   String searchTitle;
-  @HiveField(6)
   String chapterRoad;
-  @HiveField(7)
   String chapterList;
-  @HiveField(8)
   String selectorIframe;
-  @HiveField(9)
   String selectorM3u8;
-  @HiveField(10)
   String selectorVideo;
-  @HiveField(11)
   String referer;
-  @HiveField(12)
   bool verify;
-  @HiveField(13)
   String verifyPng;
-  @HiveField(14)
   String verifyInput;
-  @HiveField(15)
   String verifySubmit;
 
-  @HiveField(20)
-  DateTime createdAt;
-
+  DateTime? createdAt;
   String cookie;
   VideoType? videoType;
 
   ParserEntity({
     this.id = 0,
     this.name = '',
-    this.basisUrl = '',
+    super.basisUrl = '',
     this.searchUrl = '',
     this.searchHref = '',
     this.searchTitle = '',
@@ -97,7 +49,7 @@ class ParserEntity {
     this.cookie = '',
     this.videoType,
 
-    required this.createdAt,
+    this.createdAt,
   });
 
   Map<String, dynamic> toJson() => {
@@ -112,7 +64,6 @@ class ParserEntity {
     'selectorM3u8': selectorM3u8,
     'selectorVideo': selectorVideo,
     'referer': referer,
-
     'verify': verify,
     'verifyPng': verifyPng,
     'verifyInput': verifyInput,

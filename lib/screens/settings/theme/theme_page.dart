@@ -42,7 +42,7 @@ class ThemePage extends ConsumerWidget {
                     SettingsDropdownButton<ThemeMode>(
                       title: '主题',
                       value: theme,
-                      onChanged: (v) => themeNotifier.setThemeMode(v!),
+                      onChanged: (v) => themeNotifier.setThemeMode(v),
                       items: [
                         DropdownMenuItem<ThemeMode>(
                           value: ThemeMode.light,

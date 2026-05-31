@@ -1,4 +1,5 @@
 import 'package:rikka/screens/settings/parser/parser_entity.dart';
+import 'package:rikka/screens/settings/parser/tests/detail_entity.dart';
 import 'package:rikka/screens/settings/parser/tests/parser_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 

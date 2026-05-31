@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rikka/screens/schedule/comics_entity.dart';
+import 'package:rikka/screens/settings/api/comics_entity.dart';
 import 'package:rikka/screens/settings/parser/parser_entity.dart';
+import 'package:rikka/screens/settings/parser/tests/detail_entity.dart';
 import 'package:rikka/screens/settings/parser/tests/parser_test_provide.dart';
 import 'package:rikka/utils/logger.dart';
 

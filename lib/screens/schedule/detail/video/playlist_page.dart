@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rikka/screens/settings/parser/parser_entity.dart';
 import 'package:rikka/component/player/video_player.dart';
 import 'package:rikka/screens/schedule/schedule_page.dart';
+import 'package:rikka/screens/settings/parser/tests/detail_entity.dart';
 
 import 'playlist_provider.dart';
 

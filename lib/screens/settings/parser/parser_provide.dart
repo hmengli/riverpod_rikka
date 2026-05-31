@@ -9,7 +9,7 @@ part 'parser_provide.g.dart';
 @riverpod
 Future<List<ParserEntity>> parserList(Ref ref, VideoType videoType) async {
   Log.i('parserList');
-  return ref.watch(parserRepositoryProvider(videoType)).getAll();
+  return ref.watch(parserRepositoryProvider<ParserEntity>(videoType)).getAll();
 }
 
 @riverpod
@@ -27,15 +27,15 @@ class ParserNotifier extends _$ParserNotifier {
     });
   }
 
-  Future<void> upsertParser(ParserEntity entity) async {
+  Future<void> upsertParser(Entity entity) async {
     Log.d('upsertParser:${entity.basisUrl}');
     await _repo.add(entity);
     ref.invalidate(parserListProvider(videoType));
   }
 
-  Future<void> deleteEntity(String name) async {
-    Log.d('deleteEntity:$name');
-    await _repo.delete(name);
+  Future<void> deleteEntity(String basisUrl) async {
+    Log.d('deleteEntity:$basisUrl');
+    await _repo.delete(basisUrl);
     ref.invalidate(parserListProvider(videoType));
   }
 }
@@ -43,34 +43,41 @@ class ParserNotifier extends _$ParserNotifier {
 Map configMap = {VideoType.movie: 'comicsList', VideoType.comics: 'configList'};
 
 @riverpod
-Box<ParserEntity> parserBox(Ref ref, VideoType videoType) {
+Box<T> parserBox<T extends Entity>(Ref ref, VideoType videoType) {
   switch (videoType) {
     case VideoType.movie:
-      return Hive.box<ParserEntity>('movieBox');
+      return Hive.box<T>('movieBox');
     case VideoType.comics:
-      return Hive.box<ParserEntity>('comicsBox');
+      return Hive.box<T>('comicsBox');
+    case VideoType.comicsApi:
+      return Hive.box<T>('comicsApiBox');
+    case VideoType.movieApi:
+      return Hive.box<T>('movieApiBox');
   }
 }
 
 // 提供 ParserRepository 实例
 @riverpod
-ParserRepository parserRepository(Ref ref, VideoType videoType) {
-  final box = ref.watch(parserBoxProvider(videoType));
-  return ParserRepository(box);
+ParserRepository<T> parserRepository<T extends Entity>(
+  Ref ref,
+  VideoType videoType,
+) {
+  final box = ref.watch(parserBoxProvider<T>(videoType));
+  return ParserRepository<T>(box);
 }
 
-class ParserRepository {
-  final Box<ParserEntity> box;
+class ParserRepository<T extends Entity> {
+  final Box<T> box;
 
   ParserRepository(this.box);
 
-  List<ParserEntity> getAll() => box.values.toList();
+  List<T> getAll() => box.values.toList();
 
-  Future<void> add(ParserEntity todo) => box.put(todo.name, todo);
+  Future<void> add(T todo) => box.put(todo.basisUrl, todo);
 
-  Future<void> update(ParserEntity todo) => box.put(todo.name, todo);
+  Future<void> update(T todo) => box.put(todo.basisUrl, todo);
 
-  Future<void> delete(String name) => box.delete(name);
+  Future<void> delete(String basisUrl) => box.delete(basisUrl);
 
   // Stream<void> watch() => box.watch().map((event) => null);
 }

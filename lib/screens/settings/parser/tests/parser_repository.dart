@@ -5,6 +5,20 @@ import 'package:rikka/utils/logger.dart';
 
 import '../parser_entity.dart';
 
+// class ParseResult {
+//   final String step1Content; // 第一步获取的原始HTML
+//   final List<String> step1Items; // 第一步提取的链接/内容
+//   final String step2Content; // 第二步获取的HTML（点击第一个链接）
+//   final List<Map<String, String>> finalData; // 最终提取的数据
+
+//   ParseResult({
+//     required this.step1Content,
+//     required this.step1Items,
+//     required this.step2Content,
+//     required this.finalData,
+//   });
+// }
+
 /// 步骤执行函数签名：
 ///   - 输入：前一步的结果（第一步为 null）
 // ignore: unintended_html_in_doc_comment

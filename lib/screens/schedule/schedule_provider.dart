@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:browser_headers/browser_headers.dart';
 import 'package:http/http.dart' as http;
-import 'package:rikka/screens/schedule/comics_entity.dart';
+import 'package:rikka/screens/settings/api/comics_entity.dart';
 import 'package:rikka/utils/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -97,7 +97,9 @@ List<int> coreMd5(List<int> x, int len) {
 
   // 存储长度
   int index = (((len + 64) >>> 9) << 4) + 14;
-  while (index >= x.length) x.add(0);
+  while (index >= x.length) {
+    x.add(0);
+  }
   x[index] = len;
 
   int a = 1732584193;
@@ -107,7 +109,9 @@ List<int> coreMd5(List<int> x, int len) {
 
   for (int i = 0; i < x.length; i += 16) {
     // 确保当前块完整
-    while (i + 15 >= x.length) x.add(0);
+    while (i + 15 >= x.length) {
+      x.add(0);
+    }
 
     int olda = a, oldb = b, oldc = c, oldd = d;
 

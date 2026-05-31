@@ -2,10 +2,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:rikka/routes.g.dart';
 import 'package:rikka/utils/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'routes.g.dart';
 import 'screens/auth_provider.dart';
+
 part 'app_router.g.dart';
 
 // 1. 创建负责监听认证状态并通知 GoRouter 的 Listenable 类

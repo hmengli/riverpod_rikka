@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rikka/screens/settings/parser/parser_entity.dart';
 
+import 'api/parser_api_entity.dart';
 import 'settings_route.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -41,6 +42,7 @@ class SettingsPage extends ConsumerWidget {
 
 class ColumnWidget extends StatelessWidget {
   const ColumnWidget({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -66,6 +68,14 @@ class ColumnWidget extends StatelessWidget {
           title: '配置界面',
           subtitle: '主题配置界面',
           onPressed: () {},
+          leading: Icon(Icons.settings),
+        ),
+        SettingsButton(
+          title: '配置',
+          subtitle: '动漫Api规则配置界面',
+          onPressed: () {
+            ParserApiRoute(apiType: ApiType.comicsApi).push(context);
+          },
           leading: Icon(Icons.settings),
         ),
         SettingsButton(
@@ -108,12 +118,14 @@ class SettingsSwitchButton extends StatefulWidget {
     this.leading,
     required this.title,
   });
+
   @override
   State<SettingsSwitchButton> createState() => _SettingsSwitchButtonState();
 }
 
 class _SettingsSwitchButtonState extends State<SettingsSwitchButton> {
   bool _isHovering = false;
+
   void onChanged() {
     if (widget.onPressed != null) {
       _isHovering = !_isHovering;
@@ -142,20 +154,21 @@ class _SettingsSwitchButtonState extends State<SettingsSwitchButton> {
 }
 
 class SettingsDropdownButton<T> extends StatefulWidget {
-  final String title;
+  final String? title;
   final String? subtitle;
   final Widget? leading;
   final T? value;
-  final ValueChanged<T?>? onChanged;
+  final ValueChanged<T>? onChanged;
   final List<DropdownMenuItem<T>> items;
+
   const SettingsDropdownButton({
     super.key,
+    this.title,
     this.leading,
     this.subtitle,
     this.value,
     this.onChanged,
     required this.items,
-    required this.title,
   });
 
   @override
@@ -167,7 +180,7 @@ class _SettingsDropdownButtonState<T> extends State<SettingsDropdownButton<T>> {
   final LayerLink _layerLink = LayerLink();
   OverlayEntry? _overlayEntry;
   bool _isHovering = false;
-  late DropdownMenuItem<T> selectItem;
+  DropdownMenuItem<T>? deItem;
 
   @override
   void dispose() {
@@ -183,43 +196,51 @@ class _SettingsDropdownButtonState<T> extends State<SettingsDropdownButton<T>> {
     final double width = renderBox.size.width;
 
     _overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
-        left: offset.dx,
-        top: offset.dy + renderBox.size.height,
-        width: width,
-        child: CompositedTransformFollower(
-          link: _layerLink,
-          showWhenUnlinked: false,
-          offset: Offset(0, renderBox.size.height),
-          child: Material(
-            elevation: 4,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: 200),
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: widget.items.map((item) {
-                  return InkWell(
-                    onTap: () {
-                      widget.onChanged?.call(item.value);
-                      _removeOverlay();
-                      setState(() {});
-                    },
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
+      builder: (context) => GestureDetector(
+        onTap: () => _removeOverlay(),
+        behavior: HitTestBehavior.opaque,
+        child: Stack(
+          children: [
+            Container(color: Colors.transparent),
+            Positioned(
+              left: offset.dx,
+              top: offset.dy + renderBox.size.height,
+              width: width,
+              child: CompositedTransformFollower(
+                link: _layerLink,
+                showWhenUnlinked: false,
+                offset: Offset(0, renderBox.size.height),
+                child: Material(
+                  elevation: 4,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: 200),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisSize: MainAxisSize.min, // 让 Column 高度由子组件决定
+                        children: widget.items.map((item) {
+                          return InkWell(
+                            onTap: () {
+                              widget.onChanged?.call(item.value as T);
+                              _removeOverlay();
+                              setState(() {});
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              child: item.child,
+                            ),
+                          );
+                        }).toList(),
                       ),
-                      child: item.child,
                     ),
-                  );
-                }).toList(),
+                  ),
+                ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
-
     Overlay.of(context).insert(_overlayEntry!);
   }
 
@@ -231,7 +252,12 @@ class _SettingsDropdownButtonState<T> extends State<SettingsDropdownButton<T>> {
 
   @override
   Widget build(BuildContext context) {
-    selectItem = widget.items.firstWhere((e) => e.value == widget.value);
+    if (widget.value != null) {
+      deItem = widget.items.firstWhere(
+        (e) => e.value == widget.value,
+        orElse: () => DropdownMenuItem(child: Text('')),
+      );
+    }
     return CompositedTransformTarget(
       link: _layerLink,
       child: SettingsButton(
@@ -247,7 +273,7 @@ class _SettingsDropdownButtonState<T> extends State<SettingsDropdownButton<T>> {
           setState(() {});
         },
         leading: widget.leading,
-        end: selectItem.child,
+        end: deItem?.child,
       ),
     );
   }
@@ -256,52 +282,61 @@ class _SettingsDropdownButtonState<T> extends State<SettingsDropdownButton<T>> {
 class SettingsButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final Widget? leading;
-  final String title;
+  final String? title;
   final String? subtitle;
   final Widget? end;
 
   const SettingsButton({
     super.key,
+    this.title,
     this.onPressed,
     this.leading,
     this.subtitle,
     this.end,
-    required this.title,
   });
 
   @override
   Widget build(BuildContext context) {
     return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        padding: EdgeInsets.zero, // 移除内边距
+        minimumSize: Size.zero, // 允许按钮尺寸收缩到最小（可选）
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap, // 缩小点击区域
+      ),
       onPressed: onPressed,
       child: Padding(
-        padding: EdgeInsetsGeometry.all(5),
+        padding: EdgeInsets.all(16),
         child: Row(
-          // spacing:1,
           children: [
             if (leading != null)
-              Padding(padding: EdgeInsetsGeometry.all(5), child: leading),
-            Expanded(
-              child: Padding(
-                padding: EdgeInsetsGeometry.all(5),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.labelLarge,
-                      // textAlign: TextAlign.start,
-                    ),
-                    if (subtitle != null)
+              Padding(padding: EdgeInsets.zero, child: leading),
+            if (title != null)
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        subtitle!,
-                        style: Theme.of(context).textTheme.labelSmall,
+                        title ?? '',
+                        style: Theme.of(context).textTheme.labelLarge,
+                        overflow: TextOverflow.ellipsis,
+                        // textAlign: TextAlign.start,
                       ),
-                  ],
+                      if (subtitle != null)
+                        Text(
+                          subtitle!,
+                          style: Theme.of(context).textTheme.labelSmall,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
                 ),
               ),
-            ),
             if (end != null)
-              Padding(padding: EdgeInsetsGeometry.all(5), child: end),
+              Expanded(
+                child: Padding(padding: EdgeInsets.zero, child: end),
+              ),
           ],
         ),
       ),

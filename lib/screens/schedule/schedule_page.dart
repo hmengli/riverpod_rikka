@@ -7,7 +7,7 @@ import 'package:rikka/screens/schedule/schedule_provider.dart';
 import 'package:rikka/utils/logger.dart';
 import 'package:rikka/utils/utils.dart';
 
-import 'comics_entity.dart';
+import '../settings/api/comics_entity.dart';
 import 'schedule_router.dart';
 
 class SchedulePage extends StatelessWidget {
@@ -79,12 +79,6 @@ class ComicsCardH extends StatelessWidget {
   Widget build(BuildContext context) {
     Log.i('build: ${comics.vodPic}');
     final httpHeaders = BrowserHeaders.generate();
-    httpHeaders.addAll({
-      'Referer': 'https://www.gugu3.com/index.php/label/weekday.html',
-      'Accept':
-          'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-    });
-    Log.i('build: $httpHeaders');
     return Card(
       elevation: 0,
       clipBehavior: Clip.antiAlias,

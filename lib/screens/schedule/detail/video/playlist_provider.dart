@@ -3,7 +3,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rikka/component/player/video_provider.dart';
-import 'package:rikka/screens/settings/parser/parser_entity.dart';
+import 'package:rikka/screens/settings/parser/tests/detail_entity.dart';
 import 'package:rikka/screens/settings/parser/tests/parser_repository.dart';
 import 'package:rikka/screens/schedule/detail/video/proxy_service.dart';
 import 'package:rikka/screens/schedule/detail/video/silent_video_service.dart';

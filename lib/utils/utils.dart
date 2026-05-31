@@ -5,6 +5,16 @@ import 'dart:math';
 import 'package:flutter/cupertino.dart';
 
 class Utils {
+  static const String appName = 'Riverpod Rikka';
+  static const double defaultPadding = 8.0;
+  static const EdgeInsets screenPadding = EdgeInsets.all(defaultPadding);
+  static const EdgeInsets onlyPadding = EdgeInsets.only(
+    left: Utils.defaultPadding,
+    top: Utils.defaultPadding,
+    right: Utils.defaultPadding,
+  );
+  static const Duration snackBarDuration = Duration(seconds: 2);
+
   static const String m3u8 = '.m3u8';
   static const String png = '.png';
   static const String ts = '.ts';
