@@ -9,11 +9,13 @@ part 'parser_api_upsert_provide.g.dart';
 class ApiUpsertNotifier extends _$ApiUpsertNotifier {
   @override
   ParserApiEntity build() {
+    ref.keepAlive();
     return ParserApiEntity();
   }
 
   // 修改单个字段的便捷方法
-  void setParserApi(ParserApiEntity entity) {
+  void setState(ParserApiEntity entity) {
+    Log.i('setState: $entity');
     state = entity;
   }
 
@@ -22,7 +24,7 @@ class ApiUpsertNotifier extends _$ApiUpsertNotifier {
     state = state.copyWith(basisUrl: url);
   }
 
-  void setMethod(String method) {
+  void setMethod(Methods method) {
     state = state.copyWith(method: method);
   }
 
@@ -88,36 +90,11 @@ class ApiUpsertNotifier extends _$ApiUpsertNotifier {
   // }
 }
 
-// @riverpod
-// class FieldMappingNotify extends _$FieldMappingNotify {
-//   late List<FieldMapping> fieldMappings;
-//
-//   @override
-//   FieldMapping build(int index) {
-//     fieldMappings = ref.watch(apiUpsertProvider).fieldMappings;
-//     return fieldMappings[index];
-//   }
-//
-//   void setTargetField(String? element) {
-//     Log.i('setTargetField: $element');
-//     state = state.copyWith(targetField: element);
-//   }
-//
-//   void setValueSourceType(ValueSourceType element) {
-//     state = state.copyWith(type: element);
-//   }
-//
-//   void setSourcePath(String? element) {
-//     state = state.copyWith(sourcePath: element);
-//   }
-// }
-
 @riverpod
 class DataTransFormListNotify extends _$DataTransFormListNotify {
   late FieldMapping fieldMappings;
   late ApiUpsertNotifier fieldsNotify;
 
-  // 初始状态：未登录，加载完成
   @override
   List<DataTransForm> build(int index) {
     fieldsNotify = ref.read(apiUpsertProvider.notifier);
@@ -131,10 +108,41 @@ class DataTransFormListNotify extends _$DataTransFormListNotify {
     fieldsNotify.updateFieldMapping(index, updated);
   }
 
-  void deleteDataTransForm(int index) {
+  void upDataTransForm(int upIndex, DataTransForm element) {
+    state = [
+      for (int i = 0; i < state.length; i++)
+        if (i == index) element else state[i],
+    ];
+    final updated = fieldMappings.copyWith(transforms: state);
+    fieldsNotify.updateFieldMapping(index, updated);
+  }
+
+  void deleteDataTransForm(int deleteIndex) {
     final newList = List<DataTransForm>.from(state);
-    newList.removeAt(index);
+    newList.removeAt(deleteIndex);
     state = newList;
+    final updated = fieldMappings.copyWith(transforms: state);
+    fieldsNotify.updateFieldMapping(index, updated);
+  }
+
+  void updatePattern(int fromIndex, String pattern) {
+    DataTransForm updateForm = state[fromIndex].copyWith(pattern: pattern);
+    state = [
+      for (int i = 0; i < state.length; i++)
+        if (i == index) updateForm else state[i],
+    ];
+    final updated = fieldMappings.copyWith(transforms: state);
+    fieldsNotify.updateFieldMapping(index, updated);
+  }
+
+  void updateReplacement(int fromIndex, String replacement) {
+    DataTransForm updateForm = state[fromIndex].copyWith(
+      replacement: replacement,
+    );
+    state = [
+      for (int i = 0; i < state.length; i++)
+        if (i == index) updateForm else state[i],
+    ];
     final updated = fieldMappings.copyWith(transforms: state);
     fieldsNotify.updateFieldMapping(index, updated);
   }
@@ -153,38 +161,27 @@ class TransFormTypeNotify extends _$TransFormTypeNotify {
   }
 }
 
-// class DataTransFormNotify extends _$DataTransFormNotify {
-//   @override
-//   List<DataTransForm> build() {
-//     // TODO: implement build
-//     throw UnimplementedError();
-//   }
-// }
+@riverpod
+class TransFormTypeListNotify extends _$TransFormTypeListNotify {
+  // 初始状态：未登录，加载完成
+  @override
+  List<TransFormType> build(int index) {
+    return [
+      TransFormType.trim,
+      TransFormType.unescape,
+      TransFormType.removeWhitespace,
+      TransFormType.replace,
+    ];
+  }
 
-// @riverpod
-// class DynamicListNotify extends _$DynamicListNotify {
-//   // 初始状态：未登录，加载完成
-//   @override
-//   List<HeadersEntity> build(List<HeadersEntity> headers) {
-//     return headers;
-//   }
-//
-//   // 2. 添加新组件的方法
-//   void addWidget() {
-//     state = [...state, HeadersEntity(mKey: '')]; // 创建新列表
-//   }
-//
-//   // 3. 删除组件（可选）
-//   void removeWidget(HeadersEntity entity) {
-//     state = state.where((e) => e != entity).toList(); // 新列表
-//   }
-// }
+  void addTransFormType(TransFormType element) {
+    state = [...state, element];
+  }
 
-// @riverpod
-// class ValueSourceTypeNotify extends _$ValueSourceTypeNotify {
-//   // 初始状态：未登录，加载完成
-//   @override
-//   ValueSourceType build(int index) {
-//     return ValueSourceType.direct;
-//   }
-// }
+  void removeTransFormType(TransFormType element) {
+    state = [
+      for (var action in state)
+        if (element != action) action,
+    ];
+  }
+}

@@ -1,5 +1,5 @@
 import 'package:hive_ce/hive.dart';
-import 'package:rikka/screens/settings/api/parser_api_entity.dart';
+import 'package:rikka/screens/settings/parserapi/parser_api_entity.dart';
 import 'package:rikka/utils/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -21,7 +21,7 @@ class ParserApiNotifier extends _$ParserApiNotifier {
   }
 
   Future<void> upsertParser(ParserApiEntity entity) async {
-    Log.d('upsertParser:${entity.basisUrl}');
+    Log.i('upsertParser:${entity.basisUrl}');
     await _repo.add(entity);
     ref.invalidate(parserApiListProvider(apiType));
   }
@@ -35,7 +35,6 @@ class ParserApiNotifier extends _$ParserApiNotifier {
 
 @riverpod
 Future<List<ParserApiEntity>> parserApiList(Ref ref, ApiType apiType) async {
-  Log.i('parserApiList');
   return ref.watch(parserApiRepositoryProvider(apiType)).getAll();
 }
 
@@ -46,8 +45,8 @@ ParserApiRepository parserApiRepository(Ref ref, ApiType apiType) {
 }
 
 @riverpod
-Box<ParserApiEntity> parserApiBox(Ref ref, ApiType videoType) {
-  switch (videoType) {
+Box<ParserApiEntity> parserApiBox(Ref ref, ApiType apiType) {
+  switch (apiType) {
     case ApiType.comicsApi:
       return Hive.box<ParserApiEntity>('comicsApiBox');
     case ApiType.movieApi:

@@ -2,60 +2,79 @@ import 'dart:convert';
 
 import 'package:browser_headers/browser_headers.dart';
 import 'package:http/http.dart' as http;
-import 'package:rikka/screens/settings/api/comics_entity.dart';
+import 'package:rikka/screens/settings/parserapi/comics_entity.dart';
 import 'package:rikka/utils/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../settings/parserapi/comics_api.dart';
+import '../settings/parserapi/parser_api_entity.dart';
 
 part 'schedule_provider.g.dart';
 
 @riverpod
+class ApiDropdownNotify extends _$ApiDropdownNotify {
+  @override
+  ParserApiEntity build() {
+    ref.keepAlive();
+    return ParserApiEntity.normal();
+  }
+
+  void setState(ParserApiEntity element) {
+    state = element;
+  }
+}
+
+@riverpod
 Future<List<ComicsEntity>> fetchData(Ref ref, {required String weekday}) async {
   ref.keepAlive();
+  final apiValue = ref.watch(apiDropdownNotifyProvider);
+  return postData(apiEntity: apiValue, weekday: weekday);
+}
 
+Future<List<ComicsEntity>> postData({
+  required ParserApiEntity apiEntity,
+  required String weekday,
+}) async {
   try {
-    String gugu3 = "https://www.gugu3.com/index.php/api/weekday";
-    // String xifanacg = "https://www.gugu3.com/index.php/api/weekday";
-    // String dalvdm = "https://www.dalvdm.cc/index.php/ds_api/weekday";
+    Map<String, dynamic> body = {"weekday": weekday};
+    final headers = BrowserHeaders.generate();
+    if (apiEntity.headers.isNotEmpty) {
+      Log.i('fetchData:${apiEntity.headers}');
+      for (var e in apiEntity.headers) {
+        headers.addAll({e.mKey: e.mValue.toString()});
+      }
+    }
 
-    int time = DateTime.now().millisecondsSinceEpoch;
-    String md5Result = hexMd5('DS${time}DCC147D11943AF75');
-    Map<String, dynamic> gugu3Body = {
-      "weekday": "二",
-      "num": "20",
-      "by": "time",
-      "type": "",
-      "time": '$time',
-      "key": md5Result,
-    };
-    // Map<String, dynamic> xifa = {"weekday": weekday};
-    final results = await postPage(gugu3, gugu3Body);
+    final response = await http.post(
+      Uri.parse(apiEntity.basisUrl.trim()),
+      headers: headers,
+      body: body,
+    );
+    if (response.statusCode == 200) {
+      Log.i('fetchData:${response.statusCode}');
+      Map<String, dynamic> resultMap = jsonDecode(response.body);
 
-    Map<String, dynamic> resultMap = jsonDecode(results);
-    return (resultMap['list'] as List)
-        .map((item) => ComicsEntity.fromJson(item as Map<String, dynamic>))
-        .toList();
+      return DataMappingEngine.convert(resultMap, apiEntity);
+    } else {
+      throw Exception('HTTP ${response.statusCode}');
+    }
   } catch (e) {
     Log.e('fetchData:$e');
     return [];
   }
 }
 
-// 获取页面HTML//'https://dm.xifanacg.com/index.php/ds_api/weekday'
-Future<dynamic> postPage(String uri, Object? body) async {
-  final headers = BrowserHeaders.generate();
-  final response = await http.post(
-    Uri.parse(uri),
-    headers: headers,
-    body: body,
-  );
-  if (response.statusCode == 200) {
-    Log.i('postPage:${response.body}');
-    return response.body;
-  } else {
-    throw Exception('HTTP ${response.statusCode}');
-  }
-}
-
+// String gugu3 = "https://www.gugu3.com/index.php/api/weekday";
+// int time = DateTime.now().millisecondsSinceEpoch;
+// String md5Result = hexMd5('DS${time}DCC147D11943AF75');
+// Map<String, dynamic> gugu3Body = {
+//   "weekday": "二",
+//   "num": "20",
+//   "by": "time",
+//   "type": "",
+//   "time": '$time',
+//   "key": md5Result,
+// };
 int hexcase = 0; // 0=小写，1=大写
 int chrsz = 8; // 每个字符位数，固定为8
 

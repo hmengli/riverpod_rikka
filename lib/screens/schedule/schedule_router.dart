@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rikka/screens/settings/parser/tests/detail_entity.dart';
 
-import '../settings/api/comics_entity.dart';
+import '../settings/parserapi/comics_entity.dart';
 import 'detail/detail_page.dart';
 import 'detail/video/playlist_page.dart';
 

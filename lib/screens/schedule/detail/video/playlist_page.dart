@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rikka/component/player/video_player.dart';
 import 'package:rikka/screens/schedule/schedule_page.dart';
 import 'package:rikka/screens/settings/parser/tests/detail_entity.dart';
+import 'package:rikka/screens/settings/player/video_player.dart';
 
 import 'playlist_provider.dart';
 
 class VideoPlayerPage extends ConsumerStatefulWidget {
   final DetailEntity detail;
+
   const VideoPlayerPage({super.key, required this.detail});
 
   @override
@@ -67,6 +68,7 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage>
 
 class VideoPlayerWidget extends ConsumerStatefulWidget {
   final List<List<Map<String, String>>> playlist;
+
   const VideoPlayerWidget({super.key, required this.playlist});
 
   @override

@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rikka/component/worker/work_widget.dart';
 import 'package:rikka/screens/settings/parser/parser_entity.dart';
 import 'package:rikka/utils/logger.dart';
 
+import '../worker/work_widget.dart';
 import 'parser_repository.dart';
 import 'parser_test_provide.dart';
 
 class ParserTestPage extends ConsumerStatefulWidget {
   final ParserEntity? entity;
+
   const ParserTestPage({super.key, required this.entity});
 
   @override

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rikka/l10n/app_localizations.dart';
-import 'package:rikka/screens/settings/settings_page.dart';
 
+import '../assembly/dropdown_button.dart';
 import 'theme_provider.dart';
 
 class ThemePage extends ConsumerWidget {

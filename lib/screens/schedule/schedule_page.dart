@@ -4,31 +4,68 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:rikka/screens/schedule/schedule_provider.dart';
-import 'package:rikka/utils/logger.dart';
+import 'package:rikka/screens/settings/parserapi/parser_api_entity.dart';
+import 'package:rikka/screens/settings/parserapi/parser_api_provide.dart';
 import 'package:rikka/utils/utils.dart';
 
-import '../settings/api/comics_entity.dart';
+import '../settings/parserapi/comics_entity.dart';
+import '../settings/assembly/dropdown_button.dart';
 import 'schedule_router.dart';
 
-class SchedulePage extends StatelessWidget {
+class SchedulePage extends ConsumerWidget {
   const SchedulePage({super.key});
 
   //
   @override
-  Widget build(BuildContext context) {
-    return TabBarWidget(
-      isScrollable: true,
-      tabList: Utils.weekdays,
-      tabs: (p1) => List.generate(p1.length, (i) => Tab(text: p1[i])).toList(),
-      children: Utils.weekdays
-          .map((e) => TabBarViewWidget(weekday: e))
-          .toList(),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final parserApiList = ref.watch(parserApiListProvider(ApiType.comicsApi));
+
+    final apiDropdownValue = ref.watch(apiDropdownNotifyProvider);
+    final dropdownNotifier = ref.read(apiDropdownNotifyProvider.notifier);
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('时间表'),
+        actions: [
+          Expanded(
+            child: parserApiList.when(
+              data: (data) {
+                return SettingsDropdownButton<ParserApiEntity>(
+                  title: 'basisUrl',
+                  value: apiDropdownValue,
+                  onChanged: dropdownNotifier.setState,
+                  items: data.map((toElement) {
+                    return DropdownMenuItem<ParserApiEntity>(
+                      value: toElement,
+                      child: Text(
+                        toElement.basisUrl ?? '',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
+              error: (e, t) => CircularProgressIndicator(),
+              loading: () => CircularProgressIndicator(),
+            ),
+          ),
+        ],
+      ),
+      body: TabBarWidget(
+        isScrollable: true,
+        tabList: Utils.weekdays,
+        tabs: (p1) =>
+            List.generate(p1.length, (i) => Tab(text: p1[i])).toList(),
+        children: Utils.weekdays
+            .map((e) => TabBarViewWidget(weekday: e))
+            .toList(),
+      ),
     );
   }
 }
 
 class TabBarViewWidget extends ConsumerStatefulWidget {
   final String weekday;
+
   const TabBarViewWidget({super.key, required this.weekday});
 
   @override
@@ -77,8 +114,8 @@ class ComicsCardH extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Log.i('build: ${comics.vodPic}');
     final httpHeaders = BrowserHeaders.generate();
+
     return Card(
       elevation: 0,
       clipBehavior: Clip.antiAlias,
@@ -101,7 +138,7 @@ class ComicsCardH extends StatelessWidget {
                     imageUrl: comics.vodPic,
                     httpHeaders: httpHeaders,
                     placeholder: (context, url) =>
-                        const CircularProgressIndicator(),
+                        const Center(child: CircularProgressIndicator()),
                     unsupportedImageBuilder: (context, url, bytes) =>
                         SvgPicture.memory(bytes, fit: BoxFit.contain),
                     errorBuilder: (context, error, stackTrace) =>
@@ -244,6 +281,7 @@ class TabBarWidget<T> extends StatefulWidget {
   final List<Tab> Function(List<T>) tabs;
   final List<Widget> children;
   final void Function(int)? onTap;
+
   const TabBarWidget({
     super.key,
     required this.tabList,

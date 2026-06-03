@@ -3,12 +3,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:hive_ce/hive.dart';
+import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:rikka/app_widget.dart';
 import 'package:rikka/hive/hive_registrar.g.dart';
-import 'package:rikka/screens/settings/api/parser_api_entity.dart';
+import 'package:rikka/screens/settings/parserapi/parser_api_entity.dart';
 import 'package:rikka/utils/logger.dart';
 import 'package:rikka/utils/utils.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -21,11 +21,10 @@ Future<void> main() async {
   /*
    * Hive  本地数据库初始化
    */
-
-  // await Hive.initFlutter();
   // 1. 初始化 Hive 存储目录
-  final appDocDir = await getApplicationDocumentsDirectory();
-  Hive.init(appDocDir.path);
+  // await Hive.initFlutter();
+  final appDir = await getApplicationDocumentsDirectory();
+  Hive.init(appDir.path);
   Hive.registerAdapters();
   Hive.openBox<ParserEntity>('movieBox');
   Hive.openBox<ParserEntity>('comicsBox');
@@ -58,11 +57,16 @@ Future<void> main() async {
    */
   await Log.init(
     LogConfig(
-      level: LogLevel.info, // 显示 debug 及以上
-      enableConsole: true, // 输出到控制台
-      enableFile: true, // 同时写入文件
-      maxFileCount: 5, // 最多保留 5 个日志文件
-      fileMaxAge: Duration(days: 3), // 超过 3 天的日志自动删除
+      level: LogLevel.info,
+      // 显示 debug 及以上
+      enableConsole: true,
+      // 输出到控制台
+      enableFile: true,
+      // 同时写入文件
+      maxFileCount: 5,
+      // 最多保留 5 个日志文件
+      fileMaxAge: Duration(days: 3),
+      // 超过 3 天的日志自动删除
       isRelease: kReleaseMode, // 根据模式自动调整颜色
     ),
   );

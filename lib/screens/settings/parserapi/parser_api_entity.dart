@@ -3,25 +3,39 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'parser_api_entity.freezed.dart';
 
 /// 字段映射配置：目标字段名 -> 源字段的取值规则
-///
+List<Map<String, dynamic>> dataList = [
+  {
+    "basisUrl": "https://dm.xifanacg.com/index.php/ds_api/weekday",
+    "method": "POST",
+    "dataRootPath": "data.list",
+  },
+];
+
+enum Methods { get, post }
+
 enum ApiType { comicsApi, movieApi }
 
-enum ValueSourceType { direct, template }
+enum ValueSourceType { none, direct, template }
 
 enum TransFormType { trim, unescape, replace, removeWhitespace }
 
 @freezed
 abstract class ParserApiEntity with _$ParserApiEntity {
   const factory ParserApiEntity({
-    String? basisUrl,
-    String? method,
-    String? dataRootPath,
+    @Default('') String basisUrl,
+    @Default(Methods.post) Methods method,
+    @Default('list') String dataRootPath,
     @Default([]) List<HeadersEntity> headers,
     @Default([]) List<FieldMapping> fieldMappings,
   }) = _ParserApiEntity;
 
-  // factory ParserApiEntity.fromJson(Map<String, Object?> json) =>
-  //     _$ParserApiEntityFromJson(json);
+  const factory ParserApiEntity.normal({
+    @Default('https://www.mwcy.net/index.php/ds_api/weekday') String basisUrl,
+    @Default(Methods.post) Methods method,
+    @Default('list') String dataRootPath,
+    @Default([]) List<HeadersEntity> headers,
+    @Default([]) List<FieldMapping> fieldMappings,
+  }) = _DefaultParserApiEntity;
 
   factory ParserApiEntity.fromJson(Map<String, dynamic> json) {
     final fieldMappings = json['fieldMappings'];
@@ -33,8 +47,8 @@ abstract class ParserApiEntity with _$ParserApiEntity {
     }
     return ParserApiEntity(
       basisUrl: json['basisUrl'] ?? '',
-      method: json['method'] ?? '',
-      dataRootPath: json['dataRootPath'] ?? '',
+      method: json['method'] ?? 'POST',
+      dataRootPath: json['dataRootPath'] ?? 'data.list',
       headers: json['headers'] ?? [],
       fieldMappings: fieldMappingList,
     );

@@ -4,9 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:rikka/utils/logger.dart';
 import 'package:rikka/utils/utils.dart';
 
-import '../../settings_page.dart';
+import '../../assembly/dropdown_button.dart';
 import '../comics_entity.dart';
 import '../parser_api_entity.dart';
+import '../parser_api_provide.dart';
 import 'parser_api_upsert_provide.dart';
 
 /// 表单字段类型
@@ -37,7 +38,6 @@ class _ParserApiUpsertPageState extends ConsumerState<ParserApiUpsertPage> {
     entity = widget.entity ?? ParserApiEntity();
     _controllers.addAll({
       'basisUrl': TextEditingController(text: entity.basisUrl),
-      'method': TextEditingController(text: entity.method),
       'dataRootPath': TextEditingController(text: entity.dataRootPath),
     });
   }
@@ -53,20 +53,22 @@ class _ParserApiUpsertPageState extends ConsumerState<ParserApiUpsertPage> {
   void onSaved() {
     _formKey.currentState?.save();
     ParserApiEntity entity = _save();
-    Log.i('message: $entity');
+    Log.i('onSaved:$entity');
+    ref.read(parserApiProvider(widget.apiType).notifier).upsertParser(entity);
     context.pop();
   }
 
   ParserApiEntity _save() {
     final apiNotify = ref.read(apiUpsertProvider.notifier);
     apiNotify.setBasisUrl(_controllers['basisUrl']!.text);
-    apiNotify.setMethod(_controllers['method']!.text);
     apiNotify.setDataRootPath(_controllers['dataRootPath']!.text);
     return ref.watch(apiUpsertProvider);
   }
 
   @override
   Widget build(BuildContext context) {
+    final apiValue = ref.watch(apiUpsertProvider);
+    final apiNotify = ref.read(apiUpsertProvider.notifier);
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
@@ -77,33 +79,57 @@ class _ParserApiUpsertPageState extends ConsumerState<ParserApiUpsertPage> {
         child: ListView(
           padding: EdgeInsets.all(16),
           children: [
-            Container(
-              padding: Utils.onlyPadding,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.all(Radius.circular(5)),
-              ),
-              child: Column(
-                children: [
-                  ..._controllers.keys.map(
-                    (key) => Padding(
-                      padding: EdgeInsets.only(bottom: Utils.defaultPadding),
-                      child: TextFormField(
-                        controller: _controllers[key],
-                        decoration: InputDecoration(
-                          labelText: key,
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.text,
-                        maxLines: 1,
-                      ),
+            GroupCard(
+              children: [
+                Padding(
+                  padding: Utils.onlyPadding,
+                  child: TextFormField(
+                    controller: _controllers['basisUrl'],
+                    decoration: InputDecoration(
+                      labelText: 'basisUrl',
+                      border: OutlineInputBorder(),
                     ),
+                    keyboardType: TextInputType.text,
+                    maxLines: 1,
                   ),
-                ],
-              ),
+                ),
+                Padding(
+                  padding: Utils.onlyPadding,
+                  child: SettingsDropdownButton<Methods>(
+                    title: 'Method',
+                    value: apiValue.method,
+                    onChanged: apiNotify.setMethod,
+                    items: Methods.values.map((toElement) {
+                      return DropdownMenuItem<Methods>(
+                        value: toElement,
+                        child: Text(
+                          toElement.name,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                DynamicAddWidget(title: 'header'),
+              ],
             ),
-            DynamicAddWidget(title: 'header'),
-            FieldMappingWidget(title: 'fieldMapping'),
+            GroupCard(
+              children: [
+                Padding(
+                  padding: Utils.onlyPadding,
+                  child: TextFormField(
+                    controller: _controllers['dataRootPath'],
+                    decoration: InputDecoration(
+                      labelText: 'dataRootPath',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.text,
+                    maxLines: 1,
+                  ),
+                ),
+                FieldMappingWidget(title: 'fieldMapping'),
+              ],
+            ),
           ],
         ),
       ),
@@ -123,20 +149,36 @@ class DynamicAddWidget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final headers = ref.watch(apiUpsertProvider).headers;
     final apiNotify = ref.read(apiUpsertProvider.notifier);
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: Utils.defaultPadding),
-      child: Column(
-        children: [
-          TitleAddCard(title: title, onPressed: apiNotify.addHeaders),
-          ...List.generate(headers.length, (index) {
-            return DynamicAddCard(
-              index: index,
-              dynamic: headers[index],
-              onPressed: () => apiNotify.removeHeaders(index),
-            );
-          }),
-        ],
+    return Column(
+      children: [
+        TitleAddCard(title: title, onPressed: apiNotify.addHeaders),
+        ...List.generate(headers.length, (index) {
+          return DynamicAddCard(
+            index: index,
+            entity: headers[index],
+            onPressed: () => apiNotify.removeHeaders(index),
+          );
+        }),
+      ],
+    );
+  }
+}
+
+class GroupCard extends StatelessWidget {
+  final List<Widget> children;
+
+  const GroupCard({super.key, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: Utils.onlyPadding,
+      padding: Utils.onlyPadding,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.all(Radius.circular(5)),
       ),
+      child: Column(children: children),
     );
   }
 }
@@ -149,12 +191,8 @@ class TitleAddCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.all(Radius.circular(5)),
-      ),
+    return Padding(
+      padding: Utils.onlyPadding,
       child: Row(
         children: [
           Expanded(
@@ -175,12 +213,12 @@ class TitleAddCard extends StatelessWidget {
 
 class DynamicAddCard extends ConsumerStatefulWidget {
   final int index;
-  final HeadersEntity dynamic;
+  final HeadersEntity entity;
   final void Function()? onPressed;
 
   const DynamicAddCard({
     super.key,
-    required this.dynamic,
+    required this.entity,
     required this.index,
     this.onPressed,
   });
@@ -192,26 +230,22 @@ class DynamicAddCard extends ConsumerStatefulWidget {
 class _DynamicAddCardState extends ConsumerState<DynamicAddCard> {
   @override
   Widget build(BuildContext context) {
+    Log.i('DynamicAddCard: ${widget.entity}');
     final apiNotify = ref.read(apiUpsertProvider.notifier);
-    return Container(
-      padding: Utils.onlyPadding,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.all(Radius.circular(5)),
-      ),
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: Utils.defaultPadding),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Padding(
-                  padding: EdgeInsets.only(bottom: Utils.defaultPadding),
+                  padding: EdgeInsets.symmetric(vertical: Utils.defaultPadding),
                   child: TextFormField(
                     onSaved: (v) =>
                         apiNotify.updateHeaders(widget.index, mKey: v),
-                    initialValue: widget.dynamic.mKey,
+                    initialValue: widget.entity.mKey,
                     decoration: InputDecoration(
                       labelText: 'key',
                       border: OutlineInputBorder(),
@@ -221,11 +255,11 @@ class _DynamicAddCardState extends ConsumerState<DynamicAddCard> {
                   ),
                 ),
                 Padding(
-                  padding: EdgeInsets.only(bottom: Utils.defaultPadding),
+                  padding: EdgeInsets.symmetric(vertical: Utils.defaultPadding),
                   child: TextFormField(
                     onSaved: (v) =>
                         apiNotify.updateHeaders(widget.index, mValue: v),
-                    initialValue: widget.dynamic.mValue,
+                    initialValue: widget.entity.mValue,
                     decoration: InputDecoration(
                       labelText: 'value',
                       border: OutlineInputBorder(),
@@ -259,65 +293,50 @@ class FieldMappingWidget extends ConsumerStatefulWidget {
 class _FieldMappingWidgetState extends ConsumerState<FieldMappingWidget> {
   @override
   Widget build(BuildContext context) {
-    final dynamicList = ref.watch(apiUpsertProvider).fieldMappings;
+    final fieldMappings = ref.watch(apiUpsertProvider).fieldMappings;
     final apiNotify = ref.read(apiUpsertProvider.notifier);
-    return Padding(
-      padding: EdgeInsets.only(bottom: 16),
-      child: Column(
-        children: [
-          TitleAddCard(
-            title: widget.title,
-            onPressed: apiNotify.addFieldMapping,
-          ),
-          ...List.generate(dynamicList.length, (index) {
-            return FieldMappingCard(
-              index: index,
-              dynamic: dynamicList[index],
-              onPressed: () => apiNotify.removeFieldMapping(index),
-            );
-          }),
-        ],
-      ),
+    Log.i('message: ${fieldMappings.length}');
+    return Column(
+      children: [
+        TitleAddCard(title: widget.title, onPressed: apiNotify.addFieldMapping),
+        ...List.generate(fieldMappings.length, (index) {
+          return FieldMappingCard(index: index);
+        }),
+      ],
     );
   }
 }
 
-class FieldMappingCard extends ConsumerWidget {
+class FieldMappingCard extends ConsumerStatefulWidget {
   final int index;
-  final FieldMapping dynamic;
-  final void Function()? onPressed;
 
-  const FieldMappingCard({
-    super.key,
-    required this.dynamic,
-    this.onPressed,
-    required this.index,
-  });
+  const FieldMappingCard({super.key, required this.index});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final fields = ref.watch(apiUpsertProvider).fieldMappings[index];
+  ConsumerState<FieldMappingCard> createState() => _FieldMappingCardState();
+}
+
+class _FieldMappingCardState extends ConsumerState<FieldMappingCard> {
+  @override
+  Widget build(BuildContext context) {
+    final fieldMappings = ref.watch(apiUpsertProvider).fieldMappings;
     final fieldsNotify = ref.read(apiUpsertProvider.notifier);
-    return Container(
-      padding: Utils.onlyPadding,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.all(Radius.circular(5)),
-      ),
+    final fields = fieldMappings[widget.index];
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: Utils.defaultPadding),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: Column(
               children: [
                 Padding(
-                  padding: EdgeInsets.only(bottom: Utils.defaultPadding),
+                  padding: EdgeInsets.symmetric(vertical: Utils.defaultPadding),
                   child: SettingsDropdownButton<String>(
                     title: 'TargetField',
                     value: fields.targetField,
                     onChanged: (value) {
                       final updated = fields.copyWith(targetField: value);
-                      fieldsNotify.updateFieldMapping(index, updated);
+                      fieldsNotify.updateFieldMapping(widget.index, updated);
                     },
                     items: ComicsEntity.list.map((toElement) {
                       return DropdownMenuItem<String>(
@@ -328,13 +347,13 @@ class FieldMappingCard extends ConsumerWidget {
                   ),
                 ),
                 Padding(
-                  padding: EdgeInsets.only(bottom: Utils.defaultPadding),
+                  padding: EdgeInsets.symmetric(vertical: Utils.defaultPadding),
                   child: SettingsDropdownButton<ValueSourceType>(
                     title: 'ValueSourceType',
                     value: fields.type,
                     onChanged: (value) {
                       final updated = fields.copyWith(type: value);
-                      fieldsNotify.updateFieldMapping(index, updated);
+                      fieldsNotify.updateFieldMapping(widget.index, updated);
                     },
                     items: ValueSourceType.values.map((toElement) {
                       return DropdownMenuItem<ValueSourceType>(
@@ -348,12 +367,12 @@ class FieldMappingCard extends ConsumerWidget {
                   ),
                 ),
                 Padding(
-                  padding: EdgeInsets.only(bottom: Utils.defaultPadding),
+                  padding: EdgeInsets.symmetric(vertical: Utils.defaultPadding),
                   child: TextFormField(
                     initialValue: fields.sourcePath,
                     onSaved: (value) {
                       final updated = fields.copyWith(sourcePath: value);
-                      fieldsNotify.updateFieldMapping(index, updated);
+                      fieldsNotify.updateFieldMapping(widget.index, updated);
                     },
                     decoration: InputDecoration(
                       labelText: 'sourcePath',
@@ -363,12 +382,15 @@ class FieldMappingCard extends ConsumerWidget {
                     maxLines: 1,
                   ),
                 ),
-                DataTransFormWidget(title: 'DataTransform', index: index),
+                DataTransFormWidget(
+                  transforms: fields.transforms,
+                  index: widget.index,
+                ),
               ],
             ),
           ),
           IconButton(
-            onPressed: onPressed,
+            onPressed: () => fieldsNotify.removeFieldMapping(widget.index),
             icon: Icon(Icons.remove_circle_outline),
           ),
         ],
@@ -378,12 +400,12 @@ class FieldMappingCard extends ConsumerWidget {
 }
 
 class DataTransFormWidget extends ConsumerStatefulWidget {
-  final String title;
+  final List<DataTransForm> transforms;
   final int index;
 
   const DataTransFormWidget({
     super.key,
-    required this.title,
+    required this.transforms,
     required this.index,
   });
 
@@ -393,26 +415,15 @@ class DataTransFormWidget extends ConsumerStatefulWidget {
 }
 
 class _DataTransFormWidgetState extends ConsumerState<DataTransFormWidget> {
-  final List<DataTransForm> dynamicList = [];
-  List<TransFormType> typeList = [];
-
-  @override
-  void initState() {
-    super.initState();
-    typeList.addAll([
-      TransFormType.trim,
-      TransFormType.unescape,
-      TransFormType.removeWhitespace,
-      TransFormType.replace,
-    ]);
-  }
-
   // 2. 添加新组件的方法
   void _addWidget(TransFormType type) {
+    final typeList = ref.watch(transFormTypeListNotifyProvider(widget.index));
+    final typeListNotify = ref.read(
+      transFormTypeListNotifyProvider(widget.index).notifier,
+    );
     final formNotify = ref.read(
       dataTransFormListNotifyProvider(widget.index).notifier,
     );
-    final formList = ref.watch(dataTransFormListNotifyProvider(widget.index));
     final typeNotify = ref.read(
       transFormTypeNotifyProvider(widget.index).notifier,
     );
@@ -421,63 +432,60 @@ class _DataTransFormWidgetState extends ConsumerState<DataTransFormWidget> {
         formNotify.addDataTransForm(
           DataTransForm.replace(pattern: '', replacement: ''),
         );
-      case TransFormType.unescape:
-      case TransFormType.trim:
-      case TransFormType.removeWhitespace:
-        if (!formList.any((val) => val.type == type)) {
-          dynamicList.add(DataTransForm(type: type));
+      default:
+        if (!widget.transforms.any((val) => val.type == type)) {
+          formNotify.addDataTransForm(DataTransForm(type: type));
           typeNotify.setTransFormType(
             typeList.firstWhere((val) => val != type),
           );
-          typeList.remove(type);
+          typeListNotify.removeTransFormType(type);
         }
     }
-
-    setState(() {});
   }
 
   // 3. 删除组件（可选）
-  void _removeWidget(DataTransForm element) {
+  void _removeWidget(int removeIndex, TransFormType element) {
+    final typeListNotify = ref.read(
+      transFormTypeListNotifyProvider(widget.index).notifier,
+    );
     final formNotify = ref.watch(
       dataTransFormListNotifyProvider(widget.index).notifier,
     );
-    formNotify.deleteDataTransForm(widget.index);
-    if (element.type != TransFormType.replace) {
-      typeList.add(element.type);
+    formNotify.deleteDataTransForm(removeIndex);
+    if (element != TransFormType.replace) {
+      typeListNotify.addTransFormType(element);
     }
-    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
+    final typeList = ref.watch(transFormTypeListNotifyProvider(widget.index));
     final transFormType = ref.watch(transFormTypeNotifyProvider(widget.index));
     final typeNotify = ref.read(
       transFormTypeNotifyProvider(widget.index).notifier,
     );
-    return Padding(
-      padding: EdgeInsets.only(bottom: Utils.defaultPadding),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: Utils.defaultPadding),
+          child: Row(
             children: [
               Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(bottom: Utils.defaultPadding),
-                  child: SettingsDropdownButton<TransFormType>(
-                    title: 'TransFormType',
-                    value: transFormType,
-                    onChanged: (v) => typeNotify.setTransFormType(v),
-                    items: typeList.map((toElement) {
-                      return DropdownMenuItem<TransFormType>(
-                        value: toElement,
-                        child: Text(
-                          toElement.name,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      );
-                    }).toList(),
-                  ),
+                child: SettingsDropdownButton<TransFormType>(
+                  title: 'TransFormType',
+                  value: transFormType,
+                  onChanged: (v) => typeNotify.setTransFormType(v),
+                  items: typeList.map((toElement) {
+                    return DropdownMenuItem<TransFormType>(
+                      value: toElement,
+                      child: Text(
+                        toElement.name,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }).toList(),
                 ),
               ),
               IconButton(
@@ -486,74 +494,48 @@ class _DataTransFormWidgetState extends ConsumerState<DataTransFormWidget> {
               ),
             ],
           ),
-          ...dynamicList.map((card) {
-            return DataTransFormCard(
-              dynamic: card,
-              onPressed: () => _removeWidget(card),
-            );
-          }),
-        ],
-      ),
+        ),
+        ...List.generate(widget.transforms.length, (i) {
+          return getDataTransForm(fromIndex: i);
+        }),
+      ],
     );
   }
-}
 
-class DataTransFormCard extends ConsumerStatefulWidget {
-  final DataTransForm dynamic;
-  final void Function()? onPressed;
+  Widget getDataTransForm({required int fromIndex}) {
+    final formNotify = ref.watch(
+      dataTransFormListNotifyProvider(widget.index).notifier,
+    );
 
-  const DataTransFormCard({super.key, required this.dynamic, this.onPressed});
-
-  @override
-  ConsumerState<DataTransFormCard> createState() => _DataTransFormCardState();
-}
-
-class _DataTransFormCardState extends ConsumerState<DataTransFormCard> {
-  late TextEditingController pattern;
-  late TextEditingController replacement;
-
-  @override
-  void initState() {
-    super.initState();
-    pattern = TextEditingController(text: widget.dynamic.pattern);
-    replacement = TextEditingController(text: widget.dynamic.replacement);
-  }
-
-  @override
-  void dispose() {
-    pattern.dispose();
-    replacement.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(padding: EdgeInsets.zero, child: get(widget.dynamic));
-  }
-
-  Widget get(DataTransForm e) {
-    switch (e.type) {
+    DataTransForm dynamic = widget.transforms[fromIndex];
+    switch (dynamic.type) {
       case TransFormType.replace:
         return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Padding(
-                    padding: EdgeInsets.only(bottom: Utils.defaultPadding),
+                    padding: EdgeInsets.symmetric(
+                      vertical: Utils.defaultPadding,
+                    ),
                     child: Container(
                       padding: EdgeInsets.all(16),
                       color: Colors.blue,
                       alignment: AlignmentGeometry.centerStart,
-                      child: Text(e.type.toString()),
+                      child: Text(dynamic.type.name),
                     ),
                   ),
                   Padding(
-                    padding: EdgeInsets.only(bottom: Utils.defaultPadding),
+                    padding: EdgeInsets.symmetric(
+                      vertical: Utils.defaultPadding,
+                    ),
                     child: TextFormField(
-                      controller: pattern,
+                      initialValue: dynamic.pattern,
+                      onSaved: (val) {
+                        formNotify.updatePattern(fromIndex, val ?? '');
+                      },
                       decoration: InputDecoration(
                         labelText: 'pattern',
                         border: OutlineInputBorder(),
@@ -563,9 +545,14 @@ class _DataTransFormCardState extends ConsumerState<DataTransFormCard> {
                     ),
                   ),
                   Padding(
-                    padding: EdgeInsets.only(bottom: Utils.defaultPadding),
+                    padding: EdgeInsets.symmetric(
+                      vertical: Utils.defaultPadding,
+                    ),
                     child: TextFormField(
-                      controller: replacement,
+                      initialValue: dynamic.replacement,
+                      onSaved: (val) {
+                        formNotify.updateReplacement(fromIndex, val ?? '');
+                      },
                       decoration: InputDecoration(
                         labelText: 'replacement',
                         border: OutlineInputBorder(),
@@ -578,33 +565,31 @@ class _DataTransFormCardState extends ConsumerState<DataTransFormCard> {
               ),
             ),
             IconButton(
-              onPressed: widget.onPressed,
+              onPressed: () => _removeWidget(fromIndex, dynamic.type),
               icon: Icon(Icons.remove_circle_outline),
             ),
           ],
         );
-      case TransFormType.unescape:
-      case TransFormType.trim:
-      case TransFormType.removeWhitespace:
+      default:
     }
-    return Row(
-      children: [
-        Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(bottom: Utils.defaultPadding),
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: Utils.defaultPadding),
+      child: Row(
+        children: [
+          Expanded(
             child: Container(
               padding: EdgeInsets.all(16),
               color: Colors.blue,
               alignment: AlignmentGeometry.centerStart,
-              child: Text(e.type.toString(), overflow: TextOverflow.ellipsis),
+              child: Text(dynamic.type.name, overflow: TextOverflow.ellipsis),
             ),
           ),
-        ),
-        IconButton(
-          onPressed: widget.onPressed,
-          icon: Icon(Icons.remove_circle_outline),
-        ),
-      ],
+          IconButton(
+            onPressed: () => _removeWidget(fromIndex, dynamic.type),
+            icon: Icon(Icons.remove_circle_outline),
+          ),
+        ],
+      ),
     );
   }
 }

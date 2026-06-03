@@ -1,4 +1,5 @@
-import 'package:rikka/screens/settings/api/parser_api_entity.dart';
+import 'package:rikka/screens/settings/parserapi/parser_api_entity.dart';
+import 'package:rikka/utils/logger.dart';
 
 import 'comics_entity.dart';
 
@@ -35,41 +36,48 @@ class DataMappingEngine {
   ) {
     // 获取原始数据列表
     List<dynamic> rawList;
-    if (config.dataRootPath != null) {
-      final data = getValueByPath(responseJson, config.dataRootPath!);
-      if (data is List) {
-        rawList = data;
-      } else {
-        rawList = [];
-      }
+    final data = getValueByPath(responseJson, config.dataRootPath);
+    if (data is List) {
+      rawList = data;
     } else {
-      // 假设整个响应就是一个列表，或者包装成单元素列表
-      if (responseJson is List) {
-        rawList = responseJson;
-      } else {
-        rawList = [responseJson];
-      }
+      rawList = [];
     }
 
     return rawList.map((rawItem) {
       final Map<String, dynamic> unifiedMap = {};
-      for (var mapping in config.fieldMappings) {
-        dynamic value;
-        if (mapping.type == ValueSourceType.direct) {
-          value = getValueByPath(rawItem, mapping.sourcePath!);
+      for (String field in ComicsEntity.list) {
+        final mapping = getFieldMappings(config.fieldMappings, field);
+        if (mapping != null) {
+          dynamic value;
+          if (mapping.type == ValueSourceType.direct) {
+            value = getValueByPath(rawItem, mapping.sourcePath!);
+          } else if (mapping.type == ValueSourceType.template) {
+            value = parseTemplate(mapping.sourcePath!, rawItem);
+          }
+          // 如果是字符串且有清洗规则，则应用
+          if (value is String && mapping.transforms.isNotEmpty) {
+            Log.i('transforms: $value');
+            value = applyTransforms(value, mapping.transforms);
+          }
+          unifiedMap[field] = value;
         } else {
-          value = parseTemplate(mapping.sourcePath!, rawItem);
+          unifiedMap[field] = rawItem[field];
         }
-        // 如果是字符串且有清洗规则，则应用
-        if (value is String && mapping.transforms.isNotEmpty) {
-          value = applyTransforms(value, mapping.transforms);
-        }
-        unifiedMap[mapping.targetField ?? ''] = value;
       }
       // 从Map创建UnifiedEntity，假设UnifiedEntity有一个fromMap构造
       return ComicsEntity.fromJson(unifiedMap);
     }).toList();
   }
+}
+
+FieldMapping? getFieldMappings(List<FieldMapping> fieldMapping, String field) {
+  for (var action in fieldMapping) {
+    if (action.targetField != null &&
+        field.compareTo(action.targetField!) == 0) {
+      return action;
+    }
+  }
+  return null;
 }
 
 String applyTransforms(String input, List<DataTransForm> transforms) {
@@ -83,10 +91,10 @@ String applyTransforms(String input, List<DataTransForm> transforms) {
         // 处理常见转义字符
         result = result
             .replaceAll(r'\"', '"')
-            .replaceAll(r'\n', '\n')
+            .replaceAll(r'\n', '')
             .replaceAll(r'\r', '')
-            .replaceAll(r'\t', '\t')
-            .replaceAll(r'\\', '\\');
+            .replaceAll(r'\t', '')
+            .replaceAll(r'\\', '');
         break;
       case TransFormType.removeWhitespace:
         result = result.replaceAll(RegExp(r'\s+'), '');

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:rikka/screens/settings/api/parser_api_entity.dart';
+import 'package:rikka/screens/settings/parserapi/parser_api_entity.dart';
 
-import 'api/upsert/parser_api_upsert_page.dart';
-import 'api/parser_api_view_page.dart';
+import 'parserapi/upsert/parser_api_upsert_page.dart';
+import 'parserapi/parser_api_view_page.dart';
 import 'cloud/cloud_page.dart';
 import 'parser/parser_entity.dart';
 import 'parser/parser_upsert_page.dart';

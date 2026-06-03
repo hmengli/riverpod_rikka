@@ -60,7 +60,7 @@ dependencies:
   cached_network_image_ce: ^4.6.4
   flutter_svg: ^2.3.0
   hive_ce: ^2.19.3
-  # hive_ce_flutter: ^1.1.0
+  hive_ce_flutter: ^1.1.0
   get_storage: ^2.1.1
   # dio: ^5.4.0
   connectivity_plus: ^7.1.1
