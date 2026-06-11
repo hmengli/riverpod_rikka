@@ -32,3 +32,22 @@ flutter run -d windows
 dart run build_runner build
 dart run build_runner watch --delete-conflicting-outputs
 
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.ParserEntity (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  name character varying DEFAULT ''::character varying UNIQUE,
+  basisUrl character varying,
+  searchUrl character varying,
+  searchHref character varying,
+  searchTitle character varying,
+  chapterRoad character varying,
+  chapterList character varying,
+  selectorIframe character varying,
+  selectorVideo character varying,
+  referer character varying,
+  CONSTRAINT ParserEntity_pkey PRIMARY KEY (id)
+);

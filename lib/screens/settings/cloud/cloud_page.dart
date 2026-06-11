@@ -6,18 +6,18 @@ import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:rikka/utils/logger.dart';
 
-import '../assembly/dropdown_button.dart';
+import '../../../utils/dropdown_button.dart';
 
-class CloudPage extends StatefulWidget {
-  const CloudPage({super.key, required this.title});
+class CloudSettingsPage extends StatefulWidget {
+  const CloudSettingsPage({super.key, required this.title});
 
   final String title;
 
   @override
-  State<CloudPage> createState() => _CloudPageState();
+  State<CloudSettingsPage> createState() => _CloudPageState();
 }
 
-class _CloudPageState extends State<CloudPage> {
+class _CloudPageState extends State<CloudSettingsPage> {
   final box = GetStorage();
   late TextEditingController supabaseUrl;
   late TextEditingController supabaseAnonKey;

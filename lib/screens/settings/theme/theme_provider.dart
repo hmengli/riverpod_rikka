@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'theme_provider.g.dart';
@@ -6,10 +7,17 @@ part 'theme_provider.g.dart';
 @riverpod
 class ThemeNotifier extends _$ThemeNotifier {
   @override
-  ThemeMode build() => ThemeMode.system;
+  ThemeMode build() {
+    String? build = GetStorage().read('ThemeMode');
+    return ThemeMode.values.firstWhere(
+      (e) => e.name == build,
+      orElse: () => ThemeMode.system,
+    );
+  }
 
-  void setThemeMode(ThemeMode mode) {
+  Future<void> setThemeMode(ThemeMode mode) async {
     if (state == mode) return;
+    await GetStorage().write('ThemeMode', mode.name);
     state = mode;
   }
 }

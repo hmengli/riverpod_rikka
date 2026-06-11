@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rikka/screens/settings/parser/parser_entity.dart';
+import 'package:rikka/screens/schedule/detail/parser/parser_entity.dart';
 
-import 'parserapi/parser_api_entity.dart';
-import 'assembly/dropdown_button.dart';
+import '../schedule/parserapi/parser_api_entity.dart';
+import '../../utils/dropdown_button.dart';
 import 'settings_route.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -98,7 +98,8 @@ class ColumnWidget extends StatelessWidget {
         SettingsButton(
           title: '云端配置',
           subtitle: '云端同步界面',
-          onPressed: () => CloudRoute().push(context),
+          onPressed: () =>
+              CloudRoute(videoType: VideoType.comics).push(context),
           leading: Icon(Icons.settings),
         ),
       ],

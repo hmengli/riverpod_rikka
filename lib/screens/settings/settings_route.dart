@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:rikka/screens/settings/parserapi/parser_api_entity.dart';
+import 'package:rikka/screens/schedule/parserapi/parser_api_entity.dart';
 
-import 'parserapi/upsert/parser_api_upsert_page.dart';
-import 'parserapi/parser_api_view_page.dart';
-import 'cloud/cloud_page.dart';
-import 'parser/parser_entity.dart';
-import 'parser/parser_upsert_page.dart';
-import 'parser/parser_view_page.dart';
-import 'parser/tests/parser_test_page.dart';
+import '../schedule/detail/parser/parser_page.dart';
+import '../schedule/parserapi/upsert/parser_api_upsert_page.dart';
+import '../schedule/parserapi/parser_api_view_page.dart';
+import '../schedule/detail/parser/parser_entity.dart';
+import '../schedule/detail/parser/parser_upsert_page.dart';
+import '../schedule/detail/parser/tests/parser_test_page.dart';
 import 'theme/theme_page.dart';
 
 part 'settings_route.g.dart';
@@ -45,12 +44,13 @@ class ThemeRoute extends GoRouteData with $ThemeRoute {
   Widget build(_, _) => ThemePage();
 }
 
-@TypedGoRoute<CloudRoute>(path: '/cloud')
+@TypedGoRoute<CloudRoute>(path: '/cloud:videoType')
 class CloudRoute extends GoRouteData with $CloudRoute {
-  const CloudRoute();
+  const CloudRoute({required this.videoType});
+  final VideoType videoType;
 
   @override
-  Widget build(_, _) => CloudPage(title: '云存储');
+  Widget build(_, _) => ParserCloudPage(videoType: videoType);
 }
 
 @TypedGoRoute<ParserRoute>(
@@ -66,13 +66,13 @@ class ParserRoute extends GoRouteData with $ParserRoute {
 
   @override
   Widget build(BuildContext context, GoRouterState state) =>
-      ParserPage(videoType: videoType);
+      ParserLocalPage(videoType: videoType);
 }
 
 class ParserUpsertRoute extends GoRouteData with $ParserUpsertRoute {
   const ParserUpsertRoute({this.$extra, required this.videoType});
   final VideoType videoType;
-  final ParserEntity? $extra;
+  final ParserUpsertArgs? $extra;
 
   @override
   Widget build(BuildContext context, GoRouterState state) =>
@@ -85,6 +85,6 @@ class ParserTestRoute extends GoRouteData with $ParserTestRoute {
   final ParserEntity? $extra;
   @override
   Widget build(BuildContext context, GoRouterState state) {
-    return ParserTestPage(entity: $extra);
+    return ParserTestPage(entity: $extra!);
   }
 }

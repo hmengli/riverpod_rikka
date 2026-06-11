@@ -6,6 +6,8 @@ part 'work_provider.g.dart';
 
 enum StepStatus { idle, loading, success, error }
 
+// typedef StepAction = Future<dynamic> Function(dynamic previousResult);
+
 class StepStateModel {
   final StepStatus status;
   final dynamic result;

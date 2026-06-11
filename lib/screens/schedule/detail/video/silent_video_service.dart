@@ -4,8 +4,8 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rikka/utils/logger.dart';
 
-final videoServiceProvider = Provider.autoDispose<VideoSilentService>((ref) {
-  return VideoSilentService();
+final videoServiceProvider = Provider.autoDispose<SilentVideoService>((ref) {
+  return SilentVideoService();
 });
 
 class Extractor {
@@ -22,7 +22,7 @@ class Extractor {
 /// 全局单例的视频提取器
 /// - 内部维护一个 WebView 实例，复用而不是每次都新建销毁
 /// - 任务队列串行执行，避免并发冲突
-class VideoSilentService implements Disposable {
+class SilentVideoService implements Disposable {
   HeadlessInAppWebView? _headlessWebView;
   bool _isInitialized = false;
   bool _isDisposed = false;
@@ -35,7 +35,7 @@ class VideoSilentService implements Disposable {
   _ExtractTask? _currentTask;
 
   // 初始化 WebView（只做一次）
-  Future<void> initWebView() async {
+  Future<void> _initWebView() async {
     if (_isInitialized) return;
     // if (_isDisposed) throw Exception('VideoSilentExtractor 已释放');
 
@@ -139,7 +139,7 @@ class VideoSilentService implements Disposable {
     }
 
     // 确保 WebView 已初始化
-    // await _initWebView();
+    await _initWebView();
 
     final completer = Completer<Extractor?>();
     final task = _ExtractTask(

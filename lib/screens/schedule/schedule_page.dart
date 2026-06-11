@@ -4,48 +4,43 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:rikka/screens/schedule/schedule_provider.dart';
-import 'package:rikka/screens/settings/parserapi/parser_api_entity.dart';
-import 'package:rikka/screens/settings/parserapi/parser_api_provide.dart';
+import 'package:rikka/screens/schedule/parserapi/parser_api_entity.dart';
+import 'package:rikka/screens/schedule/parserapi/parser_api_provide.dart';
 import 'package:rikka/utils/utils.dart';
 
-import '../settings/parserapi/comics_entity.dart';
-import '../settings/assembly/dropdown_button.dart';
+import 'schedule_entity.dart';
+import '../../utils/dropdown_button.dart';
 import 'schedule_router.dart';
 
 class SchedulePage extends ConsumerWidget {
-  const SchedulePage({super.key});
+  final ApiType apiType;
+  const SchedulePage({super.key, required this.apiType});
 
   //
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final parserApiList = ref.watch(parserApiListProvider(ApiType.comicsApi));
+    final parserApiList = ref.watch(parserApiProvider(apiType));
 
-    final apiDropdownValue = ref.watch(apiDropdownNotifyProvider);
-    final dropdownNotifier = ref.read(apiDropdownNotifyProvider.notifier);
+    final apiValue = ref.watch(apiDropdownNotifyProvider(apiType));
+    final apiNotifier = ref.read(apiDropdownNotifyProvider(apiType).notifier);
     return Scaffold(
       appBar: AppBar(
         title: Text('时间表'),
         actions: [
           Expanded(
-            child: parserApiList.when(
-              data: (data) {
-                return SettingsDropdownButton<ParserApiEntity>(
-                  title: 'basisUrl',
-                  value: apiDropdownValue,
-                  onChanged: dropdownNotifier.setState,
-                  items: data.map((toElement) {
-                    return DropdownMenuItem<ParserApiEntity>(
-                      value: toElement,
-                      child: Text(
-                        toElement.basisUrl ?? '',
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    );
-                  }).toList(),
+            child: SettingsDropdownButton<ParserApiEntity>(
+              title: 'basisUrl',
+              value: apiValue,
+              onChanged: apiNotifier.setState,
+              items: parserApiList.map((toElement) {
+                return DropdownMenuItem<ParserApiEntity>(
+                  value: toElement,
+                  child: Text(
+                    toElement.basisUrl,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 );
-              },
-              error: (e, t) => CircularProgressIndicator(),
-              loading: () => CircularProgressIndicator(),
+              }).toList(),
             ),
           ),
         ],
@@ -56,28 +51,27 @@ class SchedulePage extends ConsumerWidget {
         tabs: (p1) =>
             List.generate(p1.length, (i) => Tab(text: p1[i])).toList(),
         children: Utils.weekdays
-            .map((e) => TabBarViewWidget(weekday: e))
+            .map((e) => TabBarViewWidget(weekday: e, apiType: apiType))
             .toList(),
       ),
     );
   }
 }
 
-class TabBarViewWidget extends ConsumerStatefulWidget {
+class TabBarViewWidget extends ConsumerWidget {
   final String weekday;
+  final ApiType apiType;
 
-  const TabBarViewWidget({super.key, required this.weekday});
-
+  const TabBarViewWidget({
+    super.key,
+    required this.weekday,
+    required this.apiType,
+  });
   @override
-  ConsumerState<TabBarViewWidget> createState() => _TabBarViewWidgetState();
-}
-
-class _TabBarViewWidgetState extends ConsumerState<TabBarViewWidget> {
-  @override
-  Widget build(BuildContext context) {
-    final futureData = ref.watch(fetchDataProvider(weekday: widget.weekday));
+  Widget build(BuildContext context, WidgetRef ref) {
+    final data = ref.watch(fetchDataProvider(weekday, apiType));
     double width = MediaQuery.of(context).size.width;
-    return futureData.when(
+    return data.when(
       data: (data) => Container(
         padding: EdgeInsets.all(20),
         child: GridView.builder(
@@ -108,7 +102,7 @@ class ComicsCardH extends StatelessWidget {
     this.enableHero = true,
   });
 
-  final ComicsEntity comics;
+  final ScheduleEntity comics;
   final bool canTap;
   final bool enableHero;
 
@@ -214,7 +208,7 @@ class ComicsCardV extends StatelessWidget {
     this.enableHero = true,
   });
 
-  final ComicsEntity comics;
+  final ScheduleEntity comics;
   final bool canTap;
   final bool enableHero;
 

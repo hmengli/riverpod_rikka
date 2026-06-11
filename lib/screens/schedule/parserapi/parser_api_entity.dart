@@ -1,15 +1,24 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:hive_ce/hive.dart';
 
 part 'parser_api_entity.freezed.dart';
+part 'parser_api_entity.g.dart';
 
-/// 字段映射配置：目标字段名 -> 源字段的取值规则
-List<Map<String, dynamic>> dataList = [
-  {
-    "basisUrl": "https://dm.xifanacg.com/index.php/ds_api/weekday",
-    "method": "POST",
-    "dataRootPath": "data.list",
-  },
-];
+class ParserApiRepository {
+  final Box<ParserApiEntity> box;
+
+  ParserApiRepository(this.box);
+
+  List<ParserApiEntity> getAll() => box.values.toList();
+
+  Future<void> add(ParserApiEntity todo) => box.put(todo.basisUrl, todo);
+
+  Future<void> update(ParserApiEntity todo) => box.put(todo.basisUrl, todo);
+
+  Future<void> delete(String basisUrl) => box.delete(basisUrl);
+
+  // Stream<void> watch() => box.watch().map((event) => null);
+}
 
 enum Methods { get, post }
 
@@ -22,43 +31,23 @@ enum TransFormType { trim, unescape, replace, removeWhitespace }
 @freezed
 abstract class ParserApiEntity with _$ParserApiEntity {
   const factory ParserApiEntity({
-    @Default('') String basisUrl,
-    @Default(Methods.post) Methods method,
-    @Default('list') String dataRootPath,
-    @Default([]) List<HeadersEntity> headers,
-    @Default([]) List<FieldMapping> fieldMappings,
-  }) = _ParserApiEntity;
-
-  const factory ParserApiEntity.normal({
     @Default('https://www.mwcy.net/index.php/ds_api/weekday') String basisUrl,
     @Default(Methods.post) Methods method,
     @Default('list') String dataRootPath,
-    @Default([]) List<HeadersEntity> headers,
+    @Default([]) @JsonKey(name: 'headers') List<HeadersEntity> headers,
     @Default([]) List<FieldMapping> fieldMappings,
-  }) = _DefaultParserApiEntity;
+  }) = _ParserApiEntity;
 
-  factory ParserApiEntity.fromJson(Map<String, dynamic> json) {
-    final fieldMappings = json['fieldMappings'];
-    List<FieldMapping> fieldMappingList = [];
-    if (fieldMappings is List) {
-      fieldMappingList = fieldMappings.map((toElement) {
-        return FieldMapping.fromJson(toElement);
-      }).toList();
-    }
-    return ParserApiEntity(
-      basisUrl: json['basisUrl'] ?? '',
-      method: json['method'] ?? 'POST',
-      dataRootPath: json['dataRootPath'] ?? 'data.list',
-      headers: json['headers'] ?? [],
-      fieldMappings: fieldMappingList,
-    );
-  }
+  factory ParserApiEntity.fromJson(Map<String, dynamic> json) =>
+      _$ParserApiEntityFromJson(json);
 }
 
 @freezed
 abstract class HeadersEntity with _$HeadersEntity {
   const factory HeadersEntity({required String mKey, dynamic mValue}) =
       _HeadersEntity;
+  factory HeadersEntity.fromJson(Map<String, dynamic> json) =>
+      _$HeadersEntityFromJson(json);
 }
 
 @freezed
@@ -66,9 +55,9 @@ abstract class FieldMapping with _$FieldMapping {
   const factory FieldMapping({
     String? targetField,
     String? sourcePath,
-    ValueSourceType? type,
     @Default([]) List<DataTransForm> transforms,
-  }) = _FieldMapping;
+    @Default(ValueSourceType.none) ValueSourceType type,
+  }) = _NoneFieldMapping;
 
   const factory FieldMapping.direct({
     String? targetField,
@@ -84,12 +73,8 @@ abstract class FieldMapping with _$FieldMapping {
     @Default(ValueSourceType.template) ValueSourceType type,
   }) = _TemplateFieldMapping;
 
-  factory FieldMapping.fromJson(Map<String, dynamic> json) {
-    return FieldMapping.template(
-      targetField: json['targetField'] ?? '',
-      sourcePath: json['sourcePath'] ?? '',
-    );
-  }
+  factory FieldMapping.fromJson(Map<String, dynamic> json) =>
+      _$FieldMappingFromJson(json);
 }
 
 @freezed
@@ -123,4 +108,7 @@ abstract class DataTransForm with _$DataTransForm {
     required String replacement,
     @Default(TransFormType.replace) TransFormType type,
   }) = _ReplaceDataTransForm;
+
+  factory DataTransForm.fromJson(Map<String, dynamic> json) =>
+      _$DataTransFormFromJson(json);
 }

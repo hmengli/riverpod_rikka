@@ -1,12 +1,15 @@
 import 'package:hive_ce/hive.dart';
-import 'package:rikka/screens/settings/parserapi/parser_api_entity.dart';
-import 'package:rikka/screens/settings/parser/parser_entity.dart';
+import 'package:rikka/screens/schedule/detail/parser/parser_entity.dart';
+import 'package:rikka/screens/schedule/parserapi/parser_api_entity.dart';
 
 @GenerateAdapters([
-  AdapterSpec<ParserEntity>(
-    ignoredFields: {'createdAt', 'cookie', 'videoType'},
-  ), // 来自 parser_entity.dart
-  AdapterSpec<ParserApiEntity>(), // 来自 api_entity.dart
+  // 来自 parser_entity.dart
+  AdapterSpec<ParserEntity>(ignoredFields: {'cookie'}),
+  AdapterSpec<VideoType>(),
+  AdapterSpec<FromType>(),
+  AdapterSpec<SyncStatus>(),
+  // 来自 api_entity.dart
+  AdapterSpec<ParserApiEntity>(),
   AdapterSpec<HeadersEntity>(),
   AdapterSpec<FieldMapping>(),
   AdapterSpec<DataTransForm>(),

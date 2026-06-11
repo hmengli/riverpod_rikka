@@ -2,21 +2,21 @@ import 'dart:convert';
 
 import 'package:browser_headers/browser_headers.dart';
 import 'package:http/http.dart' as http;
-import 'package:rikka/screens/settings/parserapi/comics_entity.dart';
 import 'package:rikka/utils/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../settings/parserapi/comics_api.dart';
-import '../settings/parserapi/parser_api_entity.dart';
+import 'parserapi/parser_api_entity.dart';
+import 'parserapi/parser_api_provide.dart';
+import 'schedule_entity.dart';
 
 part 'schedule_provider.g.dart';
 
 @riverpod
 class ApiDropdownNotify extends _$ApiDropdownNotify {
   @override
-  ParserApiEntity build() {
-    ref.keepAlive();
-    return ParserApiEntity.normal();
+  ParserApiEntity build(ApiType apiType) {
+    final parserApi = ref.watch(parserApiProvider(apiType));
+    return parserApi.firstOrNull ?? ParserApiEntity();
   }
 
   void setState(ParserApiEntity element) {
@@ -25,13 +25,17 @@ class ApiDropdownNotify extends _$ApiDropdownNotify {
 }
 
 @riverpod
-Future<List<ComicsEntity>> fetchData(Ref ref, {required String weekday}) async {
+Future<List<ScheduleEntity>> fetchData(
+  Ref ref,
+  String weekday,
+  ApiType apiType,
+) async {
   ref.keepAlive();
-  final apiValue = ref.watch(apiDropdownNotifyProvider);
+  final apiValue = ref.watch(apiDropdownNotifyProvider(apiType));
   return postData(apiEntity: apiValue, weekday: weekday);
 }
 
-Future<List<ComicsEntity>> postData({
+Future<List<ScheduleEntity>> postData({
   required ParserApiEntity apiEntity,
   required String weekday,
 }) async {
@@ -62,6 +66,112 @@ Future<List<ComicsEntity>> postData({
     Log.e('fetchData:$e');
     return [];
   }
+}
+
+/// 根据点分隔路径从Map中取值，如 'data.user.name'
+dynamic getValueByPath(Map<String, dynamic> json, String path) {
+  List<String> keys = path.split('.');
+  dynamic current = json;
+  for (var key in keys) {
+    if (current is Map && current.containsKey(key)) {
+      current = current[key];
+    } else {
+      return null; // 路径不存在
+    }
+  }
+  return current;
+}
+
+/// 解析模板字符串，如 '${author} : ${summary}'，从json中获取变量值
+String parseTemplate(String template, Map<String, dynamic> json) {
+  // 匹配 ${xxx} 中的 xxx，支持点路径
+  final regex = RegExp(r'\$\{([^}]+)\}');
+  return template.replaceAllMapped(regex, (match) {
+    final path = match.group(1)!;
+    final value = getValueByPath(json, path);
+    return value?.toString() ?? '';
+  });
+}
+
+class DataMappingEngine {
+  /// 根据配置将单个API返回的JSON对象列表（或单个对象）转换为统一实体列表
+  static List<ScheduleEntity> convert(
+    dynamic responseJson,
+    ParserApiEntity config,
+  ) {
+    // 获取原始数据列表
+    List<dynamic> rawList;
+    final data = getValueByPath(responseJson, config.dataRootPath);
+    if (data is List) {
+      rawList = data;
+    } else {
+      rawList = [];
+    }
+
+    return rawList.map((rawItem) {
+      final Map<String, dynamic> unifiedMap = {};
+      for (String field in ScheduleEntity.fieldList) {
+        final mapping = getFieldMappings(config.fieldMappings, field);
+        if (mapping != null) {
+          dynamic value;
+          if (mapping.type == ValueSourceType.direct) {
+            value = getValueByPath(rawItem, mapping.sourcePath!);
+          } else if (mapping.type == ValueSourceType.template) {
+            value = parseTemplate(mapping.sourcePath!, rawItem);
+          }
+          // 如果是字符串且有清洗规则，则应用
+          if (value is String && mapping.transforms.isNotEmpty) {
+            Log.i('transforms: $value');
+            value = applyTransforms(value, mapping.transforms);
+          }
+          unifiedMap[field] = value;
+        } else {
+          unifiedMap[field] = rawItem[field];
+        }
+      }
+      // 从Map创建UnifiedEntity，假设UnifiedEntity有一个fromMap构造
+      return ScheduleEntity.fromJson(unifiedMap);
+    }).toList();
+  }
+}
+
+FieldMapping? getFieldMappings(List<FieldMapping> fieldMapping, String field) {
+  for (var action in fieldMapping) {
+    if (action.targetField != null &&
+        field.compareTo(action.targetField!) == 0) {
+      return action;
+    }
+  }
+  return null;
+}
+
+String applyTransforms(String input, List<DataTransForm> transforms) {
+  var result = input;
+  for (final t in transforms) {
+    switch (t.type) {
+      case TransFormType.trim:
+        result = result.trim();
+        break;
+      case TransFormType.unescape:
+        // 处理常见转义字符
+        result = result
+            .replaceAll(r'\"', '"')
+            .replaceAll(r'\n', '')
+            .replaceAll(r'\r', '')
+            .replaceAll(r'\t', '')
+            .replaceAll(r'\\', '');
+        break;
+      case TransFormType.removeWhitespace:
+        result = result.replaceAll(RegExp(r'\s+'), '');
+        break;
+      case TransFormType.replace:
+        if (t.pattern != null) {
+          result = result.replaceAll(RegExp(t.pattern!), t.replacement ?? '');
+        }
+        break;
+    }
+  }
+  return result;
 }
 
 // String gugu3 = "https://www.gugu3.com/index.php/api/weekday";

@@ -8,11 +8,11 @@ import 'package:http/http.dart' as http;
 import 'package:rikka/utils/logger.dart';
 import 'package:rikka/utils/utils.dart';
 
-final cookieServiceProvider = Provider.autoDispose<CookieSilentService>((ref) {
-  return CookieSilentService();
+final cookieServiceProvider = Provider.autoDispose<SilentCookieService>((ref) {
+  return SilentCookieService();
 });
 
-class CookieSilentService {
+class SilentCookieService {
   bool _initialized = false;
   late Completer<void> _pageLoadCompleter = Completer();
   late Completer<Uint8List?> _capturedCompleter = Completer();

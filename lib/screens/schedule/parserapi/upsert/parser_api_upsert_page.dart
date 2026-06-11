@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:rikka/utils/logger.dart';
 import 'package:rikka/utils/utils.dart';
 
-import '../../assembly/dropdown_button.dart';
-import '../comics_entity.dart';
+import '../../../../utils/dropdown_button.dart';
+import '../../schedule_entity.dart';
 import '../parser_api_entity.dart';
 import '../parser_api_provide.dart';
 import 'parser_api_upsert_provide.dart';
@@ -338,7 +338,7 @@ class _FieldMappingCardState extends ConsumerState<FieldMappingCard> {
                       final updated = fields.copyWith(targetField: value);
                       fieldsNotify.updateFieldMapping(widget.index, updated);
                     },
-                    items: ComicsEntity.list.map((toElement) {
+                    items: ScheduleEntity.fieldList.map((toElement) {
                       return DropdownMenuItem<String>(
                         value: toElement,
                         child: Text(toElement, overflow: TextOverflow.ellipsis),

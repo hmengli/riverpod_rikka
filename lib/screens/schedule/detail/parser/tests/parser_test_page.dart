@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rikka/screens/settings/parser/parser_entity.dart';
+import 'package:rikka/screens/schedule/detail/parser/parser_entity.dart';
 import 'package:rikka/utils/logger.dart';
 
 import '../worker/work_widget.dart';
-import 'parser_repository.dart';
 import 'parser_test_provide.dart';
 
 class ParserTestPage extends ConsumerStatefulWidget {
-  final ParserEntity? entity;
+  final ParserEntity entity;
 
   const ParserTestPage({super.key, required this.entity});
 
@@ -23,12 +22,17 @@ class _ParserTestPageState extends ConsumerState<ParserTestPage> {
   List<List<Map<String, String>>> _resultsStep3 = [];
 
   List<StepConfig> stepConfigs() {
-    ParserEntity entity =
-        widget.entity ?? ParserEntity(createdAt: DateTime.now());
+    ParserEntity entity = widget.entity;
     List<StepConfig> stepConfigs = [];
-    Log.i('cookie: ${entity.cookie}');
+    final verifyNotifier = ref.read(verifyImgProvider.notifier);
 
-    if (entity.verify && entity.cookie.isEmpty) {
+    final cookieValue = ref.watch(parserCookieProvider(entity.basisUrl));
+
+    final cookieNotifier = ref.read(
+      parserCookieProvider(entity.basisUrl).notifier,
+    );
+
+    if (entity.verify && cookieValue.isEmpty) {
       String step1Url = entity.searchUrl;
       String vodName = _keywordController.text;
       step1Url = step1Url.replaceAll('@keyword', vodName);
@@ -38,8 +42,7 @@ class _ParserTestPageState extends ConsumerState<ParserTestPage> {
           id: 'loadingPage',
           title: '加载页面',
           action: (prev) async {
-            final notifier = ref.read(cookieProvider.notifier);
-            return notifier.loadingPage(step1Url, entity.verifyPng);
+            return verifyNotifier.loadingPage(step1Url, entity.verifyPng);
           },
           subtitle: (v) => GetImage(),
           errorMessage: ' 失败，请检查网络',
@@ -57,13 +60,12 @@ class _ParserTestPageState extends ConsumerState<ParserTestPage> {
           id: 'parserCookie',
           title: '获取Cookie',
           action: (prev) async {
-            final notifier = ref.read(cookieProvider.notifier);
-            final cookie = await notifier.parserCookie(
+            final cookie = await verifyNotifier.parserCookie(
               prev,
-              input: entity.verifyInput,
-              submit: entity.verifySubmit,
+              entity: entity,
             );
-            entity.cookie = cookie ?? '';
+
+            cookieNotifier.setState(cookie ?? '');
             await Future.delayed(Duration(seconds: 4));
           },
           subtitle: (v) {
@@ -82,6 +84,7 @@ class _ParserTestPageState extends ConsumerState<ParserTestPage> {
           String resultsStep1 = await parserService.parseWithConfig(
             entity.searchUrl,
             search: _keywordController.text,
+            cookie: cookieValue,
             entity: entity,
           );
           if (resultsStep1.isNotEmpty) return resultsStep1;
@@ -117,6 +120,7 @@ class _ParserTestPageState extends ConsumerState<ParserTestPage> {
             final parserService = ref.read(parserServiceProvider);
             String step3Html = await parserService.parseWithConfig(
               '${entity.basisUrl}${_resultsStep2.first['href']}',
+              cookie: cookieValue,
               entity: entity,
             );
             _resultsStep3 = parserService.extractLinks2(
@@ -138,10 +142,8 @@ class _ParserTestPageState extends ConsumerState<ParserTestPage> {
 
   @override
   Widget build(BuildContext context) {
-    ParserEntity entity =
-        widget.entity ?? ParserEntity(createdAt: DateTime.now());
+    ParserEntity entity = widget.entity;
     Log.i("ParserTestPage");
-    ref.watch(cookieProvider);
     return Scaffold(
       appBar: AppBar(title: Text('测试: ${entity.basisUrl}')),
       body: WorkWidget(
@@ -176,7 +178,7 @@ class GetImage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final image = ref.watch(cookieProvider);
+    final image = ref.watch(verifyImgProvider);
     return image != null
         ? Image.memory(image, width: 200, height: 50)
         : CircularProgressIndicator();

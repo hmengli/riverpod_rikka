@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rikka/l10n/app_localizations.dart';
+import 'package:rikka/screens/schedule/parserapi/parser_api_entity.dart';
 import 'package:transit_kit/transit_kit.dart';
 
 import 'home/home_page.dart';
@@ -82,7 +83,7 @@ class ScheduleRoute extends GoRouteData with $ScheduleRoute {
   const ScheduleRoute();
 
   @override
-  Widget build(_, _) => const SchedulePage();
+  Widget build(_, _) => const SchedulePage(apiType: ApiType.comicsApi);
 }
 
 class SettingsRoute extends GoRouteData with $SettingsRoute {

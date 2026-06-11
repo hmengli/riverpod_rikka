@@ -1,6 +1,7 @@
 // lib/main.dart
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
@@ -8,13 +9,13 @@ import 'package:media_kit/media_kit.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:rikka/app_widget.dart';
 import 'package:rikka/hive/hive_registrar.g.dart';
-import 'package:rikka/screens/settings/parserapi/parser_api_entity.dart';
+import 'package:rikka/screens/schedule/parserapi/parser_api_entity.dart';
 import 'package:rikka/utils/logger.dart';
 import 'package:rikka/utils/utils.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'screens/settings/parser/parser_entity.dart';
+import 'screens/schedule/detail/parser/parser_entity.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,9 +27,10 @@ Future<void> main() async {
   final appDir = await getApplicationDocumentsDirectory();
   Hive.init(appDir.path);
   Hive.registerAdapters();
-  Hive.openBox<ParserEntity>('movieBox');
-  Hive.openBox<ParserEntity>('comicsBox');
-  Hive.openBox<ParserApiEntity>('comicsApiBox');
+  Hive.openBox<ParserEntity>(VideoType.comics.name);
+  Hive.openBox<ParserEntity>(VideoType.movie.name);
+  Hive.openBox<ParserApiEntity>(ApiType.comicsApi.name);
+  Hive.openBox<ParserApiEntity>(ApiType.movieApi.name);
 
   MediaKit.ensureInitialized();
 
@@ -77,18 +79,18 @@ Future<void> main() async {
    * GetStorage  本地键值对初始化
    */
   await GetStorage.init();
-  final box = GetStorage();
-  String? url = box.read('supabaseUrl');
-  String? anonKey = box.read('supabaseAnonKey');
+  // final box = GetStorage();
+  // String? url = box.read('supabaseUrl');
+  // String? anonKey = box.read('supabaseAnonKey');
+
+  await dotenv.load();
+  final url = dotenv.get('SUPABASE_URL');
+  final anonKey = dotenv.get('SUPABASE_ANON_KEY');
 
   /*
    * Supabase  云数据库初始化
    */
-  if (url == null || anonKey == null) {
-    url = 'https://iyausllaoabjijotcqsl.supabase.co';
-    anonKey = 'sb_publishable_-77deP0oUUadeA7_77Dw3A_MOA_rdDl';
-  }
-  await Supabase.initialize(url: url, anonKey: anonKey);
+  await Supabase.initialize(url: url, publishableKey: anonKey);
 
   runApp(const ProviderScope(child: AppWidget()));
   // runApp(MaterialApp(home: MyCaptchaPage()));

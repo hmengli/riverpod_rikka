@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rikka/l10n/app_localizations.dart';
 
-import '../assembly/dropdown_button.dart';
+import '../../../utils/dropdown_button.dart';
 import 'theme_provider.dart';
 
 class ThemePage extends ConsumerWidget {
@@ -16,8 +16,6 @@ class ThemePage extends ConsumerWidget {
     String light = AppLocalizations.of(context)!.light;
     String dark = AppLocalizations.of(context)!.dark;
     String system = AppLocalizations.of(context)!.system;
-    // List<String> items = [light, dark];
-    // String selectedValue = light;
     return Scaffold(
       appBar: AppBar(title: Text('主题设置')),
       body: ListView(

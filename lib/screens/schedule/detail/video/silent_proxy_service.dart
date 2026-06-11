@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:rikka/utils/logger.dart';
 import 'package:rikka/utils/utils.dart';
@@ -108,10 +110,14 @@ class ProxyRoute {
 
 // ===================== 代理服务（单例） =====================
 
-class ProxyService {
-  static final ProxyService _instance = ProxyService._internal();
-  factory ProxyService() => _instance;
-  ProxyService._internal();
+final proxyServiceProvider = Provider.autoDispose<SilentProxyService>((ref) {
+  return SilentProxyService();
+});
+
+class SilentProxyService extends Disposable {
+  // static final ProxyService _instance = ProxyService._internal();
+  // factory ProxyService() => _instance;
+  // ProxyService._internal();
 
   HttpServer? _server;
   List<ProxyRoute> _routes = [];
@@ -132,14 +138,15 @@ class ProxyService {
 
   /// 启动代理服务
   Future<String> start({required List<ProxyRoute> routes}) async {
-    if (_server != null) await stop();
+    if (_server != null) await dispose();
     _routes = routes;
     _server = await HttpServer.bind(InternetAddress.loopbackIPv4, 8080);
     _server!.listen(_handleRequest);
     return localProxyAddress!;
   }
 
-  Future<void> stop() async {
+  @override
+  Future<void> dispose() async {
     if (_server != null) {
       await _server!.close(force: true);
       _server = null;

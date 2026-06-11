@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rikka/screens/schedule/schedule_page.dart';
-import 'package:rikka/screens/settings/parser/tests/detail_entity.dart';
-import 'package:rikka/screens/settings/player/video_player.dart';
+import 'package:rikka/screens/schedule/detail/detail_entity.dart';
+import 'package:rikka/screens/schedule/detail/video/player/video_player.dart';
 
+import 'playlist_entity.dart';
 import 'playlist_provider.dart';
 
 class VideoPlayerPage extends ConsumerStatefulWidget {
@@ -15,17 +16,10 @@ class VideoPlayerPage extends ConsumerStatefulWidget {
   ConsumerState<VideoPlayerPage> createState() => _VideoPlayerPageState();
 }
 
-class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage>
-    with TickerProviderStateMixin {
-  @override
-  void initState() {
-    super.initState();
-    ref.read(playlistProvider.notifier).playList(widget.detail);
-  }
-
+class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage> {
   @override
   Widget build(BuildContext context) {
-    final playlist = ref.watch(playlistProvider);
+    final playlist = ref.watch(playlistProvider(widget.detail));
     double width = MediaQuery.of(context).size.width;
     double height = MediaQuery.of(context).size.height;
     double aspect = width / height;
@@ -36,7 +30,7 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage>
         body: Column(
           children: [
             VideoPlayer(),
-            Expanded(child: VideoPlayerWidget(playlist: playlist.step3Map)),
+            Expanded(child: VideoPlayerWidget(playlist: playlist)),
           ],
         ),
       );
@@ -44,7 +38,7 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage>
   }
 
   void _showMenu(BuildContext context) {
-    final playlist = ref.watch(playlistProvider);
+    final playlist = ref.watch(playlistProvider(widget.detail));
     showDialog(
       context: context,
       barrierColor: Colors.transparent, // 让遮罩层透明
@@ -58,7 +52,7 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage>
               color: Colors.transparent, // 半透明白色背景
               borderRadius: BorderRadius.circular(10),
             ),
-            child: VideoPlayerWidget(playlist: playlist.step3Map),
+            child: VideoPlayerWidget(playlist: playlist),
           ),
         );
       },
@@ -66,67 +60,60 @@ class _VideoPlayerPageState extends ConsumerState<VideoPlayerPage>
   }
 }
 
-class VideoPlayerWidget extends ConsumerStatefulWidget {
-  final List<List<Map<String, String>>> playlist;
-
+class VideoPlayerWidget extends ConsumerWidget {
+  final PlaylistEntity playlist;
   const VideoPlayerWidget({super.key, required this.playlist});
 
   @override
-  ConsumerState<VideoPlayerWidget> createState() => _VideoPlayerWidgetState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(playlistProvider(playlist.detail).notifier);
+    // final selIndex = ref.watch(selIndexProvider);
 
-class _VideoPlayerWidgetState extends ConsumerState<VideoPlayerWidget> {
-  @override
-  Widget build(BuildContext context) {
-    final notifier = ref.read(playlistProvider.notifier);
-    final selIndex = ref.watch(selIndexProvider);
-
-    if (widget.playlist.isEmpty) {
+    if (playlist.step3Map.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     } else {
       return TabBarWidget(
         // onTap: (p0) => service.tabIndex(p0),
         isScrollable: true,
-        tabList: widget.playlist,
+        tabList: playlist.step3Map,
         tabs: (p1) {
           return List.generate(p1.length, (i) {
             return Tab(text: '播放列表$i');
           });
         },
-        children: widget.playlist
-            .map(
-              (e) => LayoutBuilder(
-                builder: (context, box) {
-                  double parentWidth = box.maxWidth;
-                  return GridView(
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: (parentWidth / 100)
-                          .toInt(), // 每行2个item（竖向滚动时）
-                      mainAxisSpacing: 10, // 主轴方向间距（竖向滚动时为垂直间距）
-                      crossAxisSpacing: 10, // 交叉轴方向间距（竖向滚动时为水平间距）
-                      childAspectRatio: 3.0, // 子组件宽高比（宽度/高度）
-                    ),
-                    children: List.generate(e.length, (index) {
-                      final selected = selIndex == index;
-                      return Stack(
-                        fit: StackFit.expand,
-                        alignment: Alignment.center,
-                        children: [
-                          TextButton(
-                            onPressed: selected
-                                ? null
-                                : () => notifier.playIndex(index),
-                            child: Text(e[index]['value'].toString()),
-                          ),
-                          if (selected) Icon(Icons.check_circle),
-                        ],
-                      );
-                    }),
+        children: List.generate(playlist.step3Map.length, (index) {
+          final element = playlist.step3Map[index];
+          return LayoutBuilder(
+            builder: (context, box) {
+              double parentWidth = box.maxWidth;
+              return GridView(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: (parentWidth / 100)
+                      .toInt(), // 每行2个item（竖向滚动时）
+                  mainAxisSpacing: 10, // 主轴方向间距（竖向滚动时为垂直间距）
+                  crossAxisSpacing: 10, // 交叉轴方向间距（竖向滚动时为水平间距）
+                  childAspectRatio: 3.0, // 子组件宽高比（宽度/高度）
+                ),
+                children: List.generate(element.length, (index) {
+                  final selected = playlist.selIndex == index;
+                  return Stack(
+                    fit: StackFit.expand,
+                    alignment: Alignment.center,
+                    children: [
+                      TextButton(
+                        onPressed: selected
+                            ? null
+                            : () => notifier.playIndex(index),
+                        child: Text(element[index]['value'].toString()),
+                      ),
+                      if (selected) Icon(Icons.check_circle),
+                    ],
                   );
-                },
-              ),
-            )
-            .toList(),
+                }),
+              );
+            },
+          );
+        }),
       );
     }
   }

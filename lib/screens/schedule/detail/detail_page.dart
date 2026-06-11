@@ -1,17 +1,22 @@
+import 'package:browser_headers/browser_headers.dart';
+import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rikka/screens/settings/parserapi/comics_entity.dart';
-import 'package:rikka/screens/settings/parser/parser_entity.dart';
-import 'package:rikka/screens/settings/parser/tests/detail_entity.dart';
-import 'package:rikka/screens/settings/parser/tests/parser_test_provide.dart';
-import 'package:rikka/utils/logger.dart';
+import 'package:flutter_svg/svg.dart';
+import 'package:rikka/screens/schedule/schedule_page.dart';
+import 'package:rikka/utils/dialog.dart';
+import 'package:rikka/screens/schedule/detail/parser/parser_provide.dart';
+import 'package:rikka/screens/schedule/schedule_entity.dart';
+import 'package:rikka/screens/schedule/detail/parser/parser_entity.dart';
+import 'package:rikka/screens/schedule/detail/parser/tests/parser_test_provide.dart';
 
 import '../schedule_router.dart';
+import 'detail_entity.dart';
 import 'detail_provider.dart';
-import 'silent_cookie_service.dart';
+import 'parser/tests/silent_cookie_service.dart';
 
 class DetailPage extends ConsumerStatefulWidget {
-  final ComicsEntity comics;
+  final ScheduleEntity comics;
   const DetailPage({super.key, required this.comics});
 
   @override
@@ -21,22 +26,46 @@ class DetailPage extends ConsumerStatefulWidget {
 class _DetailPageState extends ConsumerState<DetailPage> {
   @override
   Widget build(BuildContext context) {
-    ref.watch(cookieProvider);
-    final double maxWidth = 200;
-    final double maxHeight = 300;
-    ComicsEntity comics = widget.comics;
+    final double maxWidth = 300;
+    // final double maxHeight = 300;
+    ScheduleEntity comics = widget.comics;
     return Scaffold(
       appBar: AppBar(title: Text(comics.vodName)),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Hero(
-              tag: comics.vodId,
-              child: Image.network(
-                comics.vodPic,
-                width: maxWidth,
-                height: maxHeight,
+            Container(
+              width: maxWidth,
+              padding: const EdgeInsets.all(10),
+              child: Hero(
+                transitionOnUserGestures: true,
+                tag: comics.vodId,
+                child: AspectRatio(
+                  aspectRatio: 0.7, // 16:9 比例
+                  child: CachedNetworkImage(
+                    imageUrl: comics.vodPic,
+                    httpHeaders: BrowserHeaders.generate(),
+                    placeholder: (context, url) =>
+                        const Center(child: CircularProgressIndicator()),
+                    unsupportedImageBuilder: (context, url, bytes) =>
+                        SvgPicture.memory(bytes, fit: BoxFit.contain),
+                    errorBuilder: (context, error, stackTrace) =>
+                        const Icon(Icons.error),
+                  ),
+
+                  // Image.network(
+                  //   comics.vodPic,
+                  //   fit: BoxFit.cover,
+                  //   frameBuilder:
+                  //       (context, child, frame, wasSynchronouslyLoaded) {
+                  //         if (frame == null) {
+                  //           return Center(child: CircularProgressIndicator());
+                  //         }
+                  //         return child;
+                  //       },
+                  // ),
+                ),
               ),
             ),
             Text('当前详情ID: ${comics.vodId}'),
@@ -45,10 +74,10 @@ class _DetailPageState extends ConsumerState<DetailPage> {
             ElevatedButton(
               onPressed: () async {
                 // 通过动态路由跳转到播放页
-                // DetailDialog.bottomDialog(
-                //   context,
-                //   // ParserEntityTabview(comics: comics),
-                // );
+                DetailDialog.bottomDialog(
+                  context,
+                  ParserEntityTabview(comics: comics),
+                );
               },
               child: Text('播放'),
             ),
@@ -59,35 +88,29 @@ class _DetailPageState extends ConsumerState<DetailPage> {
   }
 }
 
-// class ParserEntityTabview extends ConsumerWidget {
-//   final ComicsEntity comics;
-//   const ParserEntityTabview({super.key, required this.comics});
+class ParserEntityTabview extends ConsumerWidget {
+  final ScheduleEntity comics;
+  const ParserEntityTabview({super.key, required this.comics});
 
-//   @override
-//   Widget build(BuildContext context, WidgetRef ref) {
-//     final configs = ref.watch(parserListProvider);
-//     return configs.when(
-//       data: (data) {
-//         return TabBarWidget(
-//           isScrollable: true,
-//           tabList: data,
-//           tabs: (l) => l.map((element) {
-//             return Tab(text: element.name, icon: Icon(Icons.recommend));
-//           }).toList(),
-//           children: data.map((element) {
-//             return RecommendTab(comics: comics, parser: element);
-//           }).toList(),
-//         );
-//       },
-//       error: (error, stackTrace) => Center(child: Text("ERROR: 网络错误")),
-//       loading: () => Center(child: CircularProgressIndicator()),
-//     );
-//     // return
-//   }
-// }
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final configs = ref.watch(parserLocalListProvider(VideoType.comics));
+    return TabBarWidget(
+      isScrollable: true,
+      tabList: configs,
+      tabs: (l) => l.map((element) {
+        return Tab(text: element.name, icon: Icon(Icons.recommend));
+      }).toList(),
+      children: configs.map((element) {
+        return RecommendTab(comics: comics, parser: element.entity);
+      }).toList(),
+    );
+    // return
+  }
+}
 
 class RecommendTab extends ConsumerStatefulWidget {
-  final ComicsEntity comics;
+  final ScheduleEntity comics;
   final ParserEntity parser;
   const RecommendTab({super.key, required this.comics, required this.parser});
 
@@ -99,19 +122,16 @@ class _RecommendTabState extends ConsumerState<RecommendTab> {
   String? showCode;
 
   Future<void> _parserCookie() async {
-    ref.read(isCookieProvider.notifier).setIsCookie(false);
+    ref.read(isCookieProvider.notifier).setState(false);
+    final parserCookie = ref.read(
+      parserCookieProvider(widget.parser.basisUrl).notifier,
+    );
     final parser = widget.parser;
-    final cookie = ref
-        .read(cookieProvider.notifier)
-        .parserCookie(
-          showCode,
-          input: parser.verifyInput,
-          submit: parser.verifySubmit,
-        );
-    cookie.then((onValue) {
-      if (onValue != null) {
-        Log.i('Cookie: $onValue');
-        parser.cookie = onValue;
+    final verifyNotify = ref.read(verifyImgProvider.notifier);
+    final cookie = verifyNotify.parserCookie(showCode, entity: parser);
+    cookie.then((value) {
+      if (value != null) {
+        parserCookie.setState(value);
       }
     });
     await Future.delayed(Duration(seconds: 3));
@@ -125,17 +145,18 @@ class _RecommendTabState extends ConsumerState<RecommendTab> {
     step1Url = step1Url.replaceAll('@keyword', comics.vodName);
 
     final isCookie = ref.watch(isCookieProvider);
+    final cookieValue = ref.watch(parserCookieProvider(parser.basisUrl));
 
     if (parser.verify) {
       //如果需要获取coolie,获取cookie
       if (isCookie) return getCookie();
-      if (parser.cookie.isEmpty) {
+      if (cookieValue.isEmpty) {
         //1.如果需要验证，而且coolie为空，先获取cookie
         return ElevatedButton(
           onPressed: () {
-            final notifier = ref.read(cookieProvider.notifier);
-            notifier.loadingPage(step1Url, parser.verifyPng);
-            ref.read(isCookieProvider.notifier).setIsCookie(true);
+            final verifyNotifier = ref.read(verifyImgProvider.notifier);
+            verifyNotifier.loadingPage(step1Url, parser.verifyPng);
+            ref.read(isCookieProvider.notifier).setState(true);
           },
           child: Text('获取验证码'),
         );
@@ -147,14 +168,14 @@ class _RecommendTabState extends ConsumerState<RecommendTab> {
 
   Widget getCookie() {
     final parser = widget.parser;
-    final imgCaptcha = ref.watch(cookieProvider);
-    final notifier = ref.read(cookieProvider.notifier);
+    final imgCaptcha = ref.watch(verifyImgProvider);
+    final verifyNotifier = ref.read(verifyImgProvider.notifier);
     return Row(
       children: [
         Padding(
           padding: EdgeInsets.all(20),
           child: ElevatedButton(
-            onPressed: () => notifier.setScreenshot(parser.verifyPng),
+            onPressed: () => verifyNotifier.setScreenshot(parser.verifyPng),
             child: imgCaptcha != null
                 ? Image.memory(imgCaptcha)
                 : CircularProgressIndicator(),
@@ -183,7 +204,7 @@ class _RecommendTabState extends ConsumerState<RecommendTab> {
 }
 
 class DetailListWidget extends ConsumerWidget {
-  final ComicsEntity comics;
+  final ScheduleEntity comics;
   final ParserEntity parser;
   const DetailListWidget({
     super.key,
@@ -193,7 +214,7 @@ class DetailListWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detailList = ref.watch(detailListProvider(parser, comics.vodName));
+    final detailList = ref.watch(detailListProvider(parser, comics));
     return detailList.when(
       data: (data) {
         if (data.isEmpty) return Center(child: Text('No Data'));
