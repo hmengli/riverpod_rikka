@@ -43,7 +43,7 @@ Future<void> main() async {
     // 设置窗口初始大小等（可选）
     WindowOptions windowOptions = WindowOptions(
       size: Size(1280, 720),
-      minimumSize: Size(384, 216),
+      minimumSize: Size(384, 720),
       center: true,
       // windowButtonVisibility: false,
       titleBarStyle: TitleBarStyle.hidden,

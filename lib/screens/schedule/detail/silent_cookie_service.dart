@@ -2,19 +2,19 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:browser_headers/browser_headers.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:html/parser.dart' as parser;
 import 'package:http/http.dart' as http;
 import 'package:rikka/utils/logger.dart';
 import 'package:rikka/utils/utils.dart';
 
-final cookieServiceProvider = Provider.autoDispose<SilentCookieService>((ref) {
-  return SilentCookieService();
-});
+import 'parser/parser_entity.dart';
 
-class SilentCookieService {
+class SilentCookieService extends Disposable {
   bool _initialized = false;
-  late Completer<void> _pageLoadCompleter = Completer();
+  late Completer<bool> _verifyLoadCompleter = Completer();
+  late final Completer<void> _pageLoadCompleter = Completer();
   late Completer<Uint8List?> _capturedCompleter = Completer();
   late WebUri webUri;
   //   late Uint8List? capturedCaptchaBytes;
@@ -23,7 +23,7 @@ class SilentCookieService {
 
   final Completer<InAppWebViewController> _controllerCompleter = Completer();
   Future<InAppWebViewController> get controllerReady =>
-      _controllerCompleter.future;
+      _controllerCompleter.future.timeout(Duration(seconds: 10));
 
   final _cookieManager = CookieManager.instance();
 
@@ -64,21 +64,27 @@ class SilentCookieService {
         shouldInterceptRequest: (controller, request) async {
           final url = request.url.toString();
           if (url.contains('/verify/')) {
-            Log.d('Request:$url');
+            Log.i('Request:$url');
+            if (!_verifyLoadCompleter.isCompleted) {
+              _verifyLoadCompleter.complete(false);
+            }
           }
           return null;
         },
         onLoadStop: (controller, url) {
-          Log.d('onLoadStop');
+          Log.i('onLoadStop');
           if (!_pageLoadCompleter.isCompleted) {
             _pageLoadCompleter.complete();
+          }
+          if (!_verifyLoadCompleter.isCompleted) {
+            _verifyLoadCompleter.complete(true);
           }
         },
       );
 
       await _headlessWebView.run();
       _initialized = true;
-      Log.d('_initialized: $_initialized');
+      Log.i('_initialized: $_initialized');
     } catch (e) {
       _controllerCompleter.completeError(e);
       rethrow;
@@ -87,6 +93,7 @@ class SilentCookieService {
 
   Future<Uint8List?> captureScreenshot(String url, String img) async {
     try {
+      Log.i('加载页面: $url');
       final controller = await controllerReady;
       webUri = WebUri(url);
       final currentUrl = await controller.getUrl();
@@ -94,7 +101,8 @@ class SilentCookieService {
         await controller.loadUrl(urlRequest: URLRequest(url: webUri));
         await _pageLoadCompleter.future.timeout(Duration(seconds: 10));
       }
-      await Future.delayed(Duration(seconds: 1));
+      // await Future.delayed(Duration(seconds: 4));
+      Log.i('加载成功: $url');
       return getScreenshot(img);
     } catch (e) {
       Log.e('获取验证码失败: $e');
@@ -218,9 +226,9 @@ class SilentCookieService {
     required String submit,
   }) async {
     try {
-      Log.d('submitCaptcha: $code,$input,$submit');
+      Log.i('submitCaptcha: $code,$input,$submit');
       final controller = await controllerReady;
-      _pageLoadCompleter = Completer();
+      _verifyLoadCompleter = Completer();
       if (code != null) {
         final submitJs =
             """
@@ -251,17 +259,23 @@ class SilentCookieService {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           input.dispatchEvent(new Event('change', { bubbles: true }));
 
-          const btnEl = getElementByXPath("//$submit");
+          const btnEl = document.querySelector("$submit");
           if (btnEl) {
             btnEl.click();
           }
           })();
         """;
         controller.evaluateJavascript(source: submitJs);
-        await _pageLoadCompleter.future.timeout(Duration(seconds: 5));
+        final verifyLoad = await _verifyLoadCompleter.future.timeout(
+          Duration(seconds: 10),
+          onTimeout: () => false,
+        );
+        if (!verifyLoad) return null;
       }
+      await Future.delayed(Duration(seconds: 3));
       final currentUrl = await controller.getUrl();
       final cookies = await _cookieManager.getCookies(url: currentUrl!);
+      Log.i('submitCaptcha: $cookies');
       return cookies.map((c) => '${c.name}=${c.value}').join('; ');
     } catch (e) {
       Log.e('submitCaptcha: $e');
@@ -293,6 +307,7 @@ class SilentCookieService {
     return false;
   }
 
+  @override
   void dispose() {
     if (!_initialized) return;
     _initialized = false;
@@ -302,6 +317,7 @@ class SilentCookieService {
       );
     }
     // _webViewController.dispose();
+    Log.i('message: _headlessWebView正常关闭');
     _headlessWebView.dispose();
   }
 }
@@ -350,4 +366,105 @@ class CaptchaService {
   //   final compressedBytes = img.encodeJpg(resizedImage, quality: 85);
   //   return Uint8List.fromList(compressedBytes);
   // }
+}
+
+class ParserService {
+  // 执行完整的三步解析
+  Future<String> parseWithConfig(
+    String step1Url, {
+    required String? cookie,
+    required ParserEntity entity,
+    String? search,
+  }) async {
+    try {
+      if (search != null) {
+        step1Url = step1Url.replaceAll('@keyword', search);
+      }
+      return await fetchPage(
+        uri: step1Url,
+        parserEntity: entity,
+        cookie: cookie ?? '',
+      );
+    } catch (e) {
+      throw Exception('网络错误，请检查网络: $e');
+    }
+  }
+
+  // 获取页面HTML
+  Future<String> fetchPage({
+    required String uri,
+    required String cookie,
+    required ParserEntity parserEntity,
+  }) async {
+    Log.i('请求URL: $uri');
+
+    final headers = BrowserHeaders.generate();
+    if (parserEntity.referer.isNotEmpty) {
+      headers.addAll({'Referer': parserEntity.referer});
+    }
+
+    if (cookie.isNotEmpty) {
+      headers.addAll({'Cookie': cookie});
+    }
+
+    Log.i('headers: $headers');
+
+    final response = await http.get(Uri.parse(uri), headers: headers);
+
+    if (response.statusCode == 200) {
+      Log.i('请求URL: ${response.statusCode}');
+      return response.body;
+    } else {
+      throw Exception('HTTP ${response.statusCode}');
+    }
+  }
+
+  // 提取链接或内容
+  List<Map<String, String?>> extractLinks1(
+    String html, {
+    required String hrefSelector,
+    required String titleSelector,
+  }) {
+    if (hrefSelector.isEmpty || titleSelector.isEmpty) return [];
+    final document = parser.parse(html);
+    final elements = document.querySelectorAll(hrefSelector);
+    return elements.map((element) {
+      String? href = element.querySelector('a')?.attributes['href'];
+      String? title;
+      if (titleSelector.contains('@')) {
+        List<String> list = titleSelector.split('@');
+        title = element.querySelector(list[0])?.attributes[list[1]];
+      } else {
+        title = element.querySelector(titleSelector)?.text;
+      }
+      return {'href': href ?? '', 'title': title ?? ''};
+    }).toList();
+  }
+
+  // 提取链接或内容
+  List<List<Map<String, String>>> extractLinks2(
+    String html, {
+    required String selector,
+    required String selectorValue,
+  }) {
+    if (selector.isEmpty || selectorValue.isEmpty) return [];
+    final document = parser.parse(html);
+    final elements = document.querySelectorAll(selector);
+    return List.generate(elements.length, (index) {
+      final elementsA = elements[index].querySelectorAll(selectorValue);
+      return elementsA.map((element) {
+        return {
+          'href': element.attributes['href'].toString(),
+          'value': element.text.trim(),
+        };
+      }).toList();
+    });
+  }
+
+  // 提取链接或内容
+  String? extractLinks3(String html, {required String selector}) {
+    final document = parser.parse(html);
+    final elements = document.querySelector('iframe');
+    return elements?.attributes['src'].toString();
+  }
 }

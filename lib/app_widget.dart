@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,6 +19,7 @@ class AppWidget extends ConsumerStatefulWidget {
 class _AppWidgetState extends ConsumerState<AppWidget>
     with WidgetsBindingObserver, WindowListener {
   bool showingExitDialog = false;
+  static const targetAspectRatio = 16 / 9;
 
   @override
   void initState() {
@@ -37,23 +36,25 @@ class _AppWidgetState extends ConsumerState<AppWidget>
   }
 
   @override
-  void onWindowClose() async {
-    // 弹出自定义对话框
-    await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Text('确认退出'),
-        content: Text('确定要关闭应用吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text('取消'),
-          ),
-          TextButton(onPressed: () => exit(0), child: Text('退出')),
-        ],
-      ),
-    );
+  void onWindowResize() async {
+    // 获取当前窗口尺寸
+    final currentSize = await windowManager.getSize();
+    final currentWidth = currentSize.width;
+    final currentHeight = currentSize.height;
+
+    // 计算目标高度（基于比例）
+    final targetHeight = currentWidth / targetAspectRatio;
+
+    if (currentHeight >= 720) {
+      await windowManager.setSize(Size(currentWidth, targetHeight));
+    }
+
+    // 如果当前高度与目标高度相差大于允许的误差值，则进行调整
+    // if ((currentHeight - targetHeight).abs() > 1.0) {
+    //   // 设置新尺寸，使其符合精确比例
+    //   await windowManager.setSize(Size(currentWidth, targetHeight));
+    // }
+    super.onWindowResize();
   }
 
   @override
@@ -124,7 +125,7 @@ class _AppWidgetState extends ConsumerState<AppWidget>
           ),
           themeMode: themeMode,
           routerConfig: router,
-          builder: (context, child) {
+          builder: (BuildContext cont, child) {
             if (Utils.isDesktop()) {
               return DragToMoveArea(child: child!);
             }

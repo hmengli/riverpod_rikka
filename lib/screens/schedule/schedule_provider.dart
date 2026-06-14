@@ -43,11 +43,11 @@ Future<List<ScheduleEntity>> postData({
     Map<String, dynamic> body = {"weekday": weekday};
     final headers = BrowserHeaders.generate();
     if (apiEntity.headers.isNotEmpty) {
-      Log.i('fetchData:${apiEntity.headers}');
       for (var e in apiEntity.headers) {
         headers.addAll({e.mKey: e.mValue.toString()});
       }
     }
+    Log.i('fetchData:$headers');
 
     final response = await http.post(
       Uri.parse(apiEntity.basisUrl.trim()),
@@ -55,7 +55,7 @@ Future<List<ScheduleEntity>> postData({
       body: body,
     );
     if (response.statusCode == 200) {
-      Log.i('fetchData:${response.statusCode}');
+      Log.i('fetchData: ${response.statusCode}');
       Map<String, dynamic> resultMap = jsonDecode(response.body);
 
       return DataMappingEngine.convert(resultMap, apiEntity);

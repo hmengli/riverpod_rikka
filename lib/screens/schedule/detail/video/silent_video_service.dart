@@ -5,7 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rikka/utils/logger.dart';
 
 final videoServiceProvider = Provider.autoDispose<SilentVideoService>((ref) {
-  return SilentVideoService();
+  final silentVideoService = SilentVideoService();
+  if (ref.mounted) {
+    ref.onDispose(silentVideoService.dispose);
+  }
+  return silentVideoService;
 });
 
 class Extractor {
@@ -61,9 +65,12 @@ class SilentVideoService implements Disposable {
         if (_currentTask == null) return null;
         final url = request.url.toString();
         if (url.endsWith('.js') ||
+            url.contains('.js?') ||
             url.endsWith('.gif') ||
             url.endsWith('.png') ||
             url.endsWith('.html') ||
+            url.endsWith('.jpg') ||
+            url.contains('.css?') ||
             url.endsWith('.css')) {
           return null;
         }

@@ -67,7 +67,6 @@ class VideoPlayerWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(playlistProvider(playlist.detail).notifier);
-    // final selIndex = ref.watch(selIndexProvider);
 
     if (playlist.step3Map.isEmpty) {
       return const Center(child: CircularProgressIndicator());

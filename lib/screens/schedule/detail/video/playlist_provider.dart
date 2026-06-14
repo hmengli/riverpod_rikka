@@ -8,15 +8,10 @@ import 'package:rikka/screens/schedule/detail/video/player/video_provider.dart';
 import 'package:rikka/utils/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../parser/tests/parser_test_provide.dart';
+import '../detail_provider.dart';
 import 'playlist_entity.dart';
 
 part 'playlist_provider.g.dart';
-
-/// 单独暴露位置（避免无关重建）
-// final step3MapProvider = Provider<List<List<Map<String, String>>>>((ref) {
-//   return ref.watch(playlistProvider).step3Map;
-// });
 
 @riverpod
 Future<List<List<Map<String, String>>>> step3Map(
@@ -26,10 +21,6 @@ Future<List<List<Map<String, String>>>> step3Map(
   final notifier = ref.read(extractServiceProvider(detail.parser).notifier);
   return notifier.step3Map(detail.href);
 }
-
-// final selIndexProvider = Provider<int>((ref) {
-//   return ref.watch(playlistProvider).selIndex;
-// });
 
 @riverpod
 class PlaylistNotifier extends _$PlaylistNotifier {
@@ -46,7 +37,7 @@ class PlaylistNotifier extends _$PlaylistNotifier {
 
   Future<String?> _fetchUrl() async {
     DetailEntity detail = state.detail;
-    // final playNotifier = ref.read(playServiceProvider(detail).notifier);
+    final eNotifier = ref.read(extractServiceProvider(detail.parser).notifier);
     final videoSilent = ref.watch(videoServiceProvider);
     final proxyService = ref.watch(proxyServiceProvider);
     try {
@@ -54,12 +45,11 @@ class PlaylistNotifier extends _$PlaylistNotifier {
       if (href == null) return null;
       String videoUrl = '${detail.parser.basisUrl}$href';
       Log.i('videoUrl:$videoUrl');
-      // String? iframeUrl = await playNotifier.httpGetIframe(videoUrl);
-      // String? iframeUrl = '';
-      // Log.i('_httpGetIframe:$iframeUrl');
-      // if (iframeUrl != null) {
-      //   videoUrl = iframeUrl;
-      // }
+      String? iframeUrl = await eNotifier.httpGetIframe(videoUrl);
+      Log.i('_httpGetIframe:$iframeUrl');
+      if (iframeUrl != null) {
+        videoUrl = iframeUrl;
+      }
       final Extractor? extractorUrl = await videoSilent.extract(
         videoUrl,
         selectorMp: detail.parser.selectorVideo,

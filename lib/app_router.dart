@@ -2,12 +2,24 @@
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:rikka/screens/login_screen.dart';
+import 'package:rikka/screens/schedule/detail/video/playlist_page.dart';
 import 'package:rikka/utils/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'routes.g.dart';
+import 'app_router.dart' as app_router;
 import 'screens/auth_provider.dart';
 
+import 'screens/main_router.dart' as main_router;
+import 'screens/schedule/detail/detail_entity.dart';
+import 'screens/schedule/schedule_router.dart' as schedule_router;
+import 'screens/settings/settings_route.dart' as settings_route;
+
 part 'app_router.g.dart';
+
+// 1. 定义 Navigator Keys
+final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
+final GlobalKey<NavigatorState> _homeShellNavigatorKey =
+    GlobalKey<NavigatorState>();
 
 // 1. 创建负责监听认证状态并通知 GoRouter 的 Listenable 类
 class AuthStateListenable extends ChangeNotifier {
@@ -39,6 +51,7 @@ GoRouter goRouter(Ref ref) {
     refreshListenable: authStateListenable,
     // 初始页面，可以是一个加载页
     initialLocation: '/splash',
+    navigatorKey: _rootNavigatorKey,
     observers: [LoggingNavigatorObserver()],
     // 路由守卫的核心逻辑
     redirect: (context, state) {
@@ -62,11 +75,46 @@ GoRouter goRouter(Ref ref) {
       // 无需重定向
       return null;
     },
+    onException: (_, GoRouterState state, GoRouter router) {
+      router.go('/404', extra: state.uri.toString());
+    },
 
-    routes: $aggregatedRoutes,
+    routes: [
+      // ========== 内部导航 (带共享标题的 Shell) ==========
+      shellRoutes,
+      // ========== 外部部导航 (全屏) ==========
+      ...app_router.$appRoutes,
+    ],
   );
 
   return router;
+}
+
+final shellRoutes = ShellRoute(
+  navigatorKey: _homeShellNavigatorKey, // 独立的子 Navigator
+  builder: (context, state, child) {
+    Log.i('uri: ${state.uri}');
+    return TitleScreen(
+      title: state.uri.toString().substring(1),
+      context: _rootNavigatorKey.currentContext!,
+      child: child,
+    );
+  },
+  routes: [
+    ...main_router.$appRoutes,
+    ...schedule_router.$appRoutes,
+    ...settings_route.$appRoutes,
+  ],
+);
+
+@TypedGoRoute<VideoPlayerRoute>(path: '/videoplayer')
+class VideoPlayerRoute extends GoRouteData with $VideoPlayerRoute {
+  const VideoPlayerRoute({this.$extra});
+  final DetailEntity? $extra;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      VideoPlayerPage(detail: $extra!);
 }
 
 class LoggingNavigatorObserver extends NavigatorObserver {

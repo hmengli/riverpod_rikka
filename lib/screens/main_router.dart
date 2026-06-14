@@ -18,7 +18,24 @@ class LoginRoute extends GoRouteData with $LoginRoute {
   const LoginRoute();
 
   @override
-  Widget build(BuildContext context, GoRouterState state) => LoginScreen();
+  Widget build(_, _) => LoginScreen();
+}
+
+@TypedGoRoute<SplashRoute>(path: '/splash')
+class SplashRoute extends GoRouteData with $SplashRoute {
+  const SplashRoute();
+
+  @override
+  Widget build(_, _) => SplashScreen();
+}
+
+@TypedGoRoute<NotFoundRoute>(path: '/404')
+class NotFoundRoute extends GoRouteData with $NotFoundRoute {
+  const NotFoundRoute();
+
+  @override
+  Widget build(_, GoRouterState state) =>
+      NotFoundScreen(uri: state.extra as String? ?? '');
 }
 
 // 3. 定义壳路由 (底部导航)
@@ -106,7 +123,6 @@ class ScaffoldWithNavBar extends StatelessWidget {
     // String favorite = AppLocalizations.of(context)!.favorite;
     String settings = AppLocalizations.of(context)!.settings;
     return Scaffold(
-      appBar: AppBar(title: Text('RIKKA')),
       body: navigationShell,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: navigationShell.currentIndex,

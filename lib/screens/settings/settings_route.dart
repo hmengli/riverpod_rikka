@@ -7,7 +7,7 @@ import '../schedule/parserapi/upsert/parser_api_upsert_page.dart';
 import '../schedule/parserapi/parser_api_view_page.dart';
 import '../schedule/detail/parser/parser_entity.dart';
 import '../schedule/detail/parser/parser_upsert_page.dart';
-import '../schedule/detail/parser/tests/parser_test_page.dart';
+import '../schedule/detail/parser/worker/work_test_page.dart';
 import 'theme/theme_page.dart';
 
 part 'settings_route.g.dart';
@@ -57,7 +57,7 @@ class CloudRoute extends GoRouteData with $CloudRoute {
   path: '/parser/:videoType',
   routes: [
     TypedGoRoute<ParserUpsertRoute>(path: 'upsert'),
-    TypedGoRoute<ParserTestRoute>(path: 'tests'),
+    TypedGoRoute<WorkTestRoute>(path: 'tests'),
   ],
 )
 class ParserRoute extends GoRouteData with $ParserRoute {
@@ -79,12 +79,10 @@ class ParserUpsertRoute extends GoRouteData with $ParserUpsertRoute {
       ParserUpsertPage(model: $extra, videoType: videoType);
 }
 
-class ParserTestRoute extends GoRouteData with $ParserTestRoute {
-  const ParserTestRoute({required this.videoType, this.$extra});
+class WorkTestRoute extends GoRouteData with $WorkTestRoute {
+  const WorkTestRoute({required this.videoType, this.$extra});
   final VideoType videoType;
   final ParserEntity? $extra;
   @override
-  Widget build(BuildContext context, GoRouterState state) {
-    return ParserTestPage(entity: $extra!);
-  }
+  Widget build(_, _) => WorkTestPage(entity: $extra!);
 }

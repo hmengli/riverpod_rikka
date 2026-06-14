@@ -3,17 +3,17 @@ import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:rikka/app_router.dart';
 import 'package:rikka/screens/schedule/schedule_page.dart';
 import 'package:rikka/utils/dialog.dart';
 import 'package:rikka/screens/schedule/detail/parser/parser_provide.dart';
 import 'package:rikka/screens/schedule/schedule_entity.dart';
 import 'package:rikka/screens/schedule/detail/parser/parser_entity.dart';
-import 'package:rikka/screens/schedule/detail/parser/tests/parser_test_provide.dart';
+import 'package:rikka/utils/logger.dart';
 
-import '../schedule_router.dart';
 import 'detail_entity.dart';
 import 'detail_provider.dart';
-import 'parser/tests/silent_cookie_service.dart';
+import 'silent_cookie_service.dart';
 
 class DetailPage extends ConsumerStatefulWidget {
   final ScheduleEntity comics;
@@ -53,18 +53,6 @@ class _DetailPageState extends ConsumerState<DetailPage> {
                     errorBuilder: (context, error, stackTrace) =>
                         const Icon(Icons.error),
                   ),
-
-                  // Image.network(
-                  //   comics.vodPic,
-                  //   fit: BoxFit.cover,
-                  //   frameBuilder:
-                  //       (context, child, frame, wasSynchronouslyLoaded) {
-                  //         if (frame == null) {
-                  //           return Center(child: CircularProgressIndicator());
-                  //         }
-                  //         return child;
-                  //       },
-                  // ),
                 ),
               ),
             ),
@@ -105,7 +93,6 @@ class ParserEntityTabview extends ConsumerWidget {
         return RecommendTab(comics: comics, parser: element.entity);
       }).toList(),
     );
-    // return
   }
 }
 
@@ -119,24 +106,6 @@ class RecommendTab extends ConsumerStatefulWidget {
 }
 
 class _RecommendTabState extends ConsumerState<RecommendTab> {
-  String? showCode;
-
-  Future<void> _parserCookie() async {
-    ref.read(isCookieProvider.notifier).setState(false);
-    final parserCookie = ref.read(
-      parserCookieProvider(widget.parser.basisUrl).notifier,
-    );
-    final parser = widget.parser;
-    final verifyNotify = ref.read(verifyImgProvider.notifier);
-    final cookie = verifyNotify.parserCookie(showCode, entity: parser);
-    cookie.then((value) {
-      if (value != null) {
-        parserCookie.setState(value);
-      }
-    });
-    await Future.delayed(Duration(seconds: 3));
-  }
-
   @override
   Widget build(BuildContext context) {
     final parser = widget.parser;
@@ -149,13 +118,15 @@ class _RecommendTabState extends ConsumerState<RecommendTab> {
 
     if (parser.verify) {
       //如果需要获取coolie,获取cookie
-      if (isCookie) return getCookie();
+      if (isCookie) {
+        return DetailVerifyWidget(
+          verify: VerifyEntity(parser: parser, url: step1Url),
+        );
+      }
       if (cookieValue.isEmpty) {
         //1.如果需要验证，而且coolie为空，先获取cookie
         return ElevatedButton(
           onPressed: () {
-            final verifyNotifier = ref.read(verifyImgProvider.notifier);
-            verifyNotifier.loadingPage(step1Url, parser.verifyPng);
             ref.read(isCookieProvider.notifier).setState(true);
           },
           child: Text('获取验证码'),
@@ -165,40 +136,67 @@ class _RecommendTabState extends ConsumerState<RecommendTab> {
 
     return DetailListWidget(comics: comics, parser: parser);
   }
+}
 
-  Widget getCookie() {
-    final parser = widget.parser;
-    final imgCaptcha = ref.watch(verifyImgProvider);
-    final verifyNotifier = ref.read(verifyImgProvider.notifier);
-    return Row(
-      children: [
-        Padding(
-          padding: EdgeInsets.all(20),
-          child: ElevatedButton(
-            onPressed: () => verifyNotifier.setScreenshot(parser.verifyPng),
-            child: imgCaptcha != null
-                ? Image.memory(imgCaptcha)
-                : CircularProgressIndicator(),
+class DetailVerifyWidget extends ConsumerStatefulWidget {
+  final VerifyEntity verify;
+  const DetailVerifyWidget({super.key, required this.verify});
+
+  @override
+  ConsumerState<DetailVerifyWidget> createState() => _DetailVerifyWidgetState();
+}
+
+class _DetailVerifyWidgetState extends ConsumerState<DetailVerifyWidget> {
+  final showCode = TextEditingController(text: '');
+
+  Future<void> _parserCookie() async {
+    final String code = showCode.text;
+    Log.i('_parserCookie: $code');
+    final parser = widget.verify.parser;
+    final parserCookie = ref.read(
+      parserCookieProvider(parser.basisUrl).notifier,
+    );
+    final verifyNotify = ref.read(verifyImgProvider(widget.verify).notifier);
+    final cookie = await verifyNotify.parserCookie(code, entity: parser);
+    parserCookie.setState(cookie ?? '');
+
+    ref.read(isCookieProvider.notifier).setState(false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // final parser = widget.verify.parser;
+    final imgCaptcha = ref.watch(verifyImgProvider(widget.verify));
+    final verifyNotifier = ref.read(verifyImgProvider(widget.verify).notifier);
+    return imgCaptcha.when(
+      data: (data) => Row(
+        children: [
+          Padding(
+            padding: EdgeInsets.all(20),
+            child: ElevatedButton(
+              onPressed: verifyNotifier.getScreenshot,
+              child: Image.memory(data!),
+            ),
           ),
-        ),
-        Expanded(
-          child: TextField(
-            autofocus: true,
-            decoration: InputDecoration(hintText: "验证码"),
-            onChanged: (value) {
-              showCode = value;
+          Expanded(
+            child: TextField(
+              controller: showCode,
+              autofocus: true,
+              decoration: InputDecoration(hintText: "验证码"),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final code = await CaptchaService.recognizeCaptcha(data);
+              showCode.text = code;
             },
+            child: Text('解析'),
           ),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            final code = await CaptchaService.recognizeCaptcha(imgCaptcha!);
-            showCode = code;
-          },
-          child: Text('解析'),
-        ),
-        ElevatedButton(onPressed: _parserCookie, child: Text('提交')),
-      ],
+          ElevatedButton(onPressed: _parserCookie, child: Text('提交')),
+        ],
+      ),
+      error: (e, t) => Text('$e'),
+      loading: () => Center(child: CircularProgressIndicator()),
     );
   }
 }

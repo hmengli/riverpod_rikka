@@ -138,7 +138,7 @@ class ParserListCard extends ConsumerWidget {
             // 测试按钮（共用）
             IconButton(
               icon: const Icon(Icons.play_arrow, color: Colors.green),
-              onPressed: () => ParserTestRoute(
+              onPressed: () => WorkTestRoute(
                 videoType: videoType,
                 $extra: entity.entity,
               ).push(context),

@@ -40,11 +40,12 @@ class _ParserUpsertPageState extends ConsumerState<ParserUpsertPage> {
       'searchUrl': TextEditingController(text: entity.searchUrl),
       'searchHref': TextEditingController(text: entity.searchHref),
       'searchTitle': TextEditingController(text: entity.searchTitle),
-      'chapterList': TextEditingController(text: entity.chapterList),
       'chapterRoad': TextEditingController(text: entity.chapterRoad),
+      'chapterList': TextEditingController(text: entity.chapterList),
       'selectorM3u8': TextEditingController(text: entity.selectorM3u8),
       'selectorVideo': TextEditingController(text: entity.selectorVideo),
     });
+    verify = entity.verify;
     _verify.addAll({
       'verifyPng': TextEditingController(text: entity.verifyPng),
       'verifyInput': TextEditingController(text: entity.verifyInput),
@@ -72,7 +73,10 @@ class _ParserUpsertPageState extends ConsumerState<ParserUpsertPage> {
   ParserEntity _save() {
     Map<String, dynamic> json = {};
     _controllers.forEach(((key, value) => json.addAll({key: value.text})));
-    _verify.forEach(((key, value) => json.addAll({key: value.text})));
+    if (verify) {
+      json.addAll({'verify': verify});
+      _verify.forEach(((key, value) => json.addAll({key: value.text})));
+    }
     return ParserEntity.fromJson(json);
   }
 

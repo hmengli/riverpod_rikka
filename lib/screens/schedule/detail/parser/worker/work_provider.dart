@@ -1,55 +1,21 @@
+import 'package:flutter/material.dart';
+import 'package:rikka/screens/schedule/detail/detail_provider.dart';
 import 'package:rikka/utils/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'work_widget.dart';
+import '../../detail_entity.dart';
+import '../parser_entity.dart';
+import 'work_entity.dart';
+import 'work_test_page.dart';
+
 part 'work_provider.g.dart';
-
-enum StepStatus { idle, loading, success, error }
-
-// typedef StepAction = Future<dynamic> Function(dynamic previousResult);
-
-class StepStateModel {
-  final StepStatus status;
-  final dynamic result;
-  final String? error;
-
-  StepStateModel({required this.status, this.result, this.error});
-
-  StepStateModel copyWith({StepStatus? status, dynamic result, String? error}) {
-    return StepStateModel(
-      status: status ?? this.status,
-      result: result ?? this.result,
-      error: error ?? this.error,
-    );
-  }
-}
-
-class WorkflowState {
-  final List<StepConfig> steps;
-  final List<StepStateModel> states; // 对应每个步骤的运行时状态
-  WorkflowState({required this.steps, required this.states});
-
-  /// 根据配置初始化状态（全部 idle）
-  factory WorkflowState.fromConfigs(List<StepConfig> configs) {
-    return WorkflowState(
-      steps: configs,
-      states: configs
-          .map((_) => StepStateModel(status: StepStatus.idle))
-          .toList(),
-    );
-  }
-}
 
 @riverpod
 class WorkflowNotifier extends _$WorkflowNotifier {
   @override
   WorkflowState build() {
-    return WorkflowState(steps: [], states: []);
-  }
-
-  /// 设置流程配置（会重置整个流程）
-  void setup(List<StepConfig> configs) {
-    state = WorkflowState.fromConfigs(configs);
+    final stepConfigs = ref.watch(stepListProvider);
+    return WorkflowState.fromConfigs(stepConfigs);
   }
 
   /// 执行整个流程
@@ -120,3 +86,130 @@ class WorkflowNotifier extends _$WorkflowNotifier {
 //     return WorkflowNotifier();
 //   },
 // );
+
+@riverpod
+class StepListNotifier extends _$StepListNotifier {
+  @override
+  List<StepConfig> build() {
+    return [];
+  }
+
+  void stepConfigs(ParserEntity entity, String vodName) {
+    String? cookieValue = '';
+    String resultsStep1 = '';
+    List<Map<String, String?>> resultsStep2 = [];
+    List<List<Map<String, String>>> resultsStep3 = [];
+    List<StepConfig> stepConfigs = [];
+    final String step1Url = entity.searchUrl.replaceAll('@keyword', vodName);
+
+    if (entity.verify) {
+      final verifyEntity = VerifyEntity(url: step1Url, parser: entity);
+
+      stepConfigs.addAll({
+        StepConfig(
+          id: 'loadingPage',
+          title: '加载页面',
+          action: (prev) async {
+            return await ref.watch(verifyImgProvider(verifyEntity).future);
+          },
+          subtitle: (result) => GetImage(verify: result),
+          errorMessage: ' 失败，请检查网络',
+        ),
+        StepConfig(
+          id: 'parserImage',
+          title: '解析验证码',
+          action: (prev) async {
+            return ref.read(getCodeProvider.notifier).setState(prev);
+          },
+          subtitle: (v) => ParserImage(),
+          errorMessage: '登录失败，请检查网络',
+        ),
+        StepConfig(
+          id: 'parserCookie',
+          title: '获取Cookie',
+          action: (prev) async {
+            final verifyNotifier = ref.read(
+              verifyImgProvider(verifyEntity).notifier,
+            );
+            cookieValue = await verifyNotifier.parserCookie(
+              prev,
+              entity: entity,
+            );
+
+            await Future.delayed(Duration(seconds: 4));
+            return cookieValue;
+          },
+          subtitle: (v) {
+            return Center(child: Text(v.toString(), maxLines: 3));
+          },
+          errorMessage: '登录失败，请检查网络',
+        ),
+      });
+    }
+    stepConfigs.addAll({
+      StepConfig(
+        id: 'login',
+        title: '页面验证',
+        action: (prev) async {
+          final parserService = ref.read(parserServiceProvider);
+          resultsStep1 = await parserService.parseWithConfig(
+            entity.searchUrl,
+            search: vodName,
+            cookie: cookieValue,
+            entity: entity,
+          );
+          if (resultsStep1.isNotEmpty) return resultsStep1;
+          throw Exception("数据异常");
+        },
+        subtitle: (v) {
+          return Center(child: Text(v.toString(), maxLines: 3));
+        },
+        errorMessage: '登录失败，请检查网络',
+      ),
+      StepConfig(
+        id: 'fetch_data',
+        title: '获取数据列表',
+        action: (prev) async {
+          Log.i('resultsStep2: $cookieValue');
+          final parserService = ref.read(parserServiceProvider);
+          resultsStep2 = parserService.extractLinks1(
+            prev,
+            titleSelector: entity.searchTitle,
+            hrefSelector: entity.searchHref,
+          );
+          return resultsStep2;
+        },
+        subtitle: (v) {
+          return Center(child: Text(v.toString(), maxLines: 3));
+        },
+        // errorMessage: '获取数据出错，可自定义', // 可选
+      ),
+      StepConfig(
+        id: 'process',
+        title: '获取播放列表',
+        action: (prev) async {
+          Log.i('resultsStep3: $cookieValue');
+          if (resultsStep2.isNotEmpty) {
+            final parserService = ref.read(parserServiceProvider);
+            String step3Html = await parserService.parseWithConfig(
+              '${entity.basisUrl}${resultsStep2.first['href']}',
+              cookie: cookieValue,
+              entity: entity,
+            );
+            resultsStep3 = parserService.extractLinks2(
+              step3Html,
+              selector: entity.chapterRoad,
+              selectorValue: entity.chapterList,
+            );
+          }
+          return resultsStep3;
+        },
+        subtitle: (v) {
+          return Center(child: Text(v.toString(), maxLines: 3));
+        },
+      ),
+    });
+
+    state = stepConfigs;
+  }
+}
