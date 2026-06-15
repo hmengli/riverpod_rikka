@@ -84,13 +84,15 @@ class PlaylistNotifier extends _$PlaylistNotifier {
   Future<void> curIndex(int index) async {
     if (index < state.step3Map.length && index >= 0) {
       state = state.copyWith(curIndex: index);
-      await playCurrent();
+      Log.i('curIndex:$index');
+      // await playCurrent();
     }
   }
 
   Future<void> next() async {
     if (state.selIndex + 1 < state.step3Map[state.curIndex].length) {
       state = state.copyWith(selIndex: state.selIndex + 1);
+      Log.i('next:${state.selIndex + 1}');
       await playCurrent();
     }
   }
@@ -98,6 +100,7 @@ class PlaylistNotifier extends _$PlaylistNotifier {
   Future<void> playIndex(int index) async {
     if (index < state.step3Map[state.curIndex].length && index >= 0) {
       state = state.copyWith(selIndex: index);
+      Log.i('playIndex:$index');
       await playCurrent();
     }
   }

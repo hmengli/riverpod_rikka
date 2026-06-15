@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:browser_headers/browser_headers.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:html/parser.dart' as parser;
 import 'package:http/http.dart' as http;
 import 'package:rikka/utils/logger.dart';
@@ -11,15 +11,20 @@ import 'package:rikka/utils/utils.dart';
 
 import 'parser/parser_entity.dart';
 
+final cookieServiceProvider = Provider.autoDispose<SilentCookieService>((ref) {
+  final silentCookieService = SilentCookieService();
+  silentCookieService.initWebView();
+  ref.onDispose(silentCookieService.dispose);
+  return silentCookieService;
+});
+
 class SilentCookieService extends Disposable {
   bool _initialized = false;
   late Completer<bool> _verifyLoadCompleter = Completer();
   late final Completer<void> _pageLoadCompleter = Completer();
   late Completer<Uint8List?> _capturedCompleter = Completer();
   late WebUri webUri;
-  //   late Uint8List? capturedCaptchaBytes;
   late HeadlessInAppWebView _headlessWebView;
-  //   late InAppWebViewController _webViewController;
 
   final Completer<InAppWebViewController> _controllerCompleter = Completer();
   Future<InAppWebViewController> get controllerReady =>
@@ -101,7 +106,6 @@ class SilentCookieService extends Disposable {
         await controller.loadUrl(urlRequest: URLRequest(url: webUri));
         await _pageLoadCompleter.future.timeout(Duration(seconds: 10));
       }
-      // await Future.delayed(Duration(seconds: 4));
       Log.i('加载成功: $url');
       return getScreenshot(img);
     } catch (e) {
@@ -272,15 +276,20 @@ class SilentCookieService extends Disposable {
         );
         if (!verifyLoad) return null;
       }
-      await Future.delayed(Duration(seconds: 3));
-      final currentUrl = await controller.getUrl();
-      final cookies = await _cookieManager.getCookies(url: currentUrl!);
-      Log.i('submitCaptcha: $cookies');
-      return cookies.map((c) => '${c.name}=${c.value}').join('; ');
+      await Future.delayed(Duration(seconds: 4));
+      return getCookieExpiry();
     } catch (e) {
       Log.e('submitCaptcha: $e');
       return null;
     }
+  }
+
+  Future<String> getCookieExpiry() async {
+    final controller = await controllerReady;
+    final currentUrl = await controller.getUrl();
+    final cookies = await _cookieManager.getCookies(url: currentUrl!);
+    Log.i('submitCaptcha: $cookies');
+    return cookies.map((c) => '${c.name}=${c.value}').join('; ');
   }
 
   Future<String> checkCookieExpiry() async {
@@ -372,7 +381,7 @@ class ParserService {
   // 执行完整的三步解析
   Future<String> parseWithConfig(
     String step1Url, {
-    required String? cookie,
+    required Map<String, String> headers,
     required ParserEntity entity,
     String? search,
   }) async {
@@ -383,7 +392,7 @@ class ParserService {
       return await fetchPage(
         uri: step1Url,
         parserEntity: entity,
-        cookie: cookie ?? '',
+        headers: headers,
       );
     } catch (e) {
       throw Exception('网络错误，请检查网络: $e');
@@ -393,20 +402,10 @@ class ParserService {
   // 获取页面HTML
   Future<String> fetchPage({
     required String uri,
-    required String cookie,
+    required Map<String, String> headers,
     required ParserEntity parserEntity,
   }) async {
     Log.i('请求URL: $uri');
-
-    final headers = BrowserHeaders.generate();
-    if (parserEntity.referer.isNotEmpty) {
-      headers.addAll({'Referer': parserEntity.referer});
-    }
-
-    if (cookie.isNotEmpty) {
-      headers.addAll({'Cookie': cookie});
-    }
-
     Log.i('headers: $headers');
 
     final response = await http.get(Uri.parse(uri), headers: headers);
@@ -466,5 +465,11 @@ class ParserService {
     final document = parser.parse(html);
     final elements = document.querySelector('iframe');
     return elements?.attributes['src'].toString();
+  }
+
+  List<String> extractLinks4(String html, {required String selector}) {
+    final document = parser.parse(html);
+    final elements = document.querySelectorAll(selector);
+    return elements.map((toElement) => toElement.innerHtml).toList();
   }
 }

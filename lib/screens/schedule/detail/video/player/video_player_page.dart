@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-class PlayerPage extends StatelessWidget {
+class VideoPage extends StatelessWidget {
   final String title;
-  const PlayerPage({super.key, required this.title});
+  const VideoPage({super.key, required this.title});
 
   @override
   Widget build(BuildContext context) {

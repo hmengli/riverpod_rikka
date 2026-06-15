@@ -3,7 +3,7 @@ import 'package:rikka/screens/schedule/detail/detail_provider.dart';
 import 'package:rikka/utils/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../detail_entity.dart';
+import '../../../../auth_provider.dart';
 import '../parser_entity.dart';
 import 'work_entity.dart';
 import 'work_test_page.dart';
@@ -103,14 +103,14 @@ class StepListNotifier extends _$StepListNotifier {
     final String step1Url = entity.searchUrl.replaceAll('@keyword', vodName);
 
     if (entity.verify) {
-      final verifyEntity = VerifyEntity(url: step1Url, parser: entity);
+      final verifyNotifier = ref.read(verifyImgProvider(entity).notifier);
 
       stepConfigs.addAll({
         StepConfig(
           id: 'loadingPage',
           title: '加载页面',
           action: (prev) async {
-            return await ref.watch(verifyImgProvider(verifyEntity).future);
+            return await verifyNotifier.loadingPage(step1Url);
           },
           subtitle: (result) => GetImage(verify: result),
           errorMessage: ' 失败，请检查网络',
@@ -128,14 +128,7 @@ class StepListNotifier extends _$StepListNotifier {
           id: 'parserCookie',
           title: '获取Cookie',
           action: (prev) async {
-            final verifyNotifier = ref.read(
-              verifyImgProvider(verifyEntity).notifier,
-            );
-            cookieValue = await verifyNotifier.parserCookie(
-              prev,
-              entity: entity,
-            );
-
+            cookieValue = await verifyNotifier.parserCookie(prev);
             await Future.delayed(Duration(seconds: 4));
             return cookieValue;
           },
@@ -151,11 +144,13 @@ class StepListNotifier extends _$StepListNotifier {
         id: 'login',
         title: '页面验证',
         action: (prev) async {
+          final headers = ref.read(browserHeadersProvider);
+          headers.addAll({'cookie': cookieValue ?? ''});
           final parserService = ref.read(parserServiceProvider);
           resultsStep1 = await parserService.parseWithConfig(
             entity.searchUrl,
             search: vodName,
-            cookie: cookieValue,
+            headers: headers,
             entity: entity,
           );
           if (resultsStep1.isNotEmpty) return resultsStep1;
@@ -170,7 +165,6 @@ class StepListNotifier extends _$StepListNotifier {
         id: 'fetch_data',
         title: '获取数据列表',
         action: (prev) async {
-          Log.i('resultsStep2: $cookieValue');
           final parserService = ref.read(parserServiceProvider);
           resultsStep2 = parserService.extractLinks1(
             prev,
@@ -189,11 +183,12 @@ class StepListNotifier extends _$StepListNotifier {
         title: '获取播放列表',
         action: (prev) async {
           Log.i('resultsStep3: $cookieValue');
+          final headers = ref.read(browserHeadersProvider);
           if (resultsStep2.isNotEmpty) {
             final parserService = ref.read(parserServiceProvider);
             String step3Html = await parserService.parseWithConfig(
               '${entity.basisUrl}${resultsStep2.first['href']}',
-              cookie: cookieValue,
+              headers: headers,
               entity: entity,
             );
             resultsStep3 = parserService.extractLinks2(

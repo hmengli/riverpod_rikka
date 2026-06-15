@@ -1,4 +1,5 @@
 // lib/providers/auth_provider.dart
+import 'package:browser_headers/browser_headers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'auth_provider.g.dart';
@@ -32,4 +33,16 @@ class AuthNotifier extends _$AuthNotifier {
     // 设置为未登录状态
     state = const AsyncValue.data(null);
   }
+}
+
+@riverpod
+Map<String, String> browserHeaders(Ref ref) {
+  final headers = BrowserHeaders.generate();
+  final ae = headers['Accept-Encoding'];
+  if (ae != null && ae.contains('br')) {
+    headers['Accept-Encoding'] = ae
+        .replaceAll(RegExp(r'\bbr\b,?\s*'), '')
+        .trim();
+  }
+  return headers;
 }

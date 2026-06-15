@@ -72,7 +72,7 @@ class VideoPlayerWidget extends ConsumerWidget {
       return const Center(child: CircularProgressIndicator());
     } else {
       return TabBarWidget(
-        // onTap: (p0) => service.tabIndex(p0),
+        onTap: (p0) => notifier.curIndex(p0),
         isScrollable: true,
         tabList: playlist.step3Map,
         tabs: (p1) {

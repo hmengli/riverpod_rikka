@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import 'package:browser_headers/browser_headers.dart';
 import 'package:http/http.dart' as http;
+import 'package:rikka/screens/auth_provider.dart';
 import 'package:rikka/utils/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -32,16 +32,18 @@ Future<List<ScheduleEntity>> fetchData(
 ) async {
   ref.keepAlive();
   final apiValue = ref.watch(apiDropdownNotifyProvider(apiType));
-  return postData(apiEntity: apiValue, weekday: weekday);
+  final headers = ref.read(browserHeadersProvider);
+
+  return postData(apiEntity: apiValue, weekday: weekday, headers: headers);
 }
 
 Future<List<ScheduleEntity>> postData({
   required ParserApiEntity apiEntity,
   required String weekday,
+  required Map<String, String> headers,
 }) async {
   try {
     Map<String, dynamic> body = {"weekday": weekday};
-    final headers = BrowserHeaders.generate();
     if (apiEntity.headers.isNotEmpty) {
       for (var e in apiEntity.headers) {
         headers.addAll({e.mKey: e.mValue.toString()});

@@ -18,8 +18,8 @@ abstract class DetailEntity with _$DetailEntity {
   const factory DetailEntity({
     required String title,
     required String href,
-    required ScheduleEntity comics,
     required ParserEntity parser,
+    ScheduleEntity? comics,
     String? imageSrc,
   }) = _DetailEntity;
 }

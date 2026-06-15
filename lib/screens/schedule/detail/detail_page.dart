@@ -1,19 +1,17 @@
-import 'package:browser_headers/browser_headers.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:rikka/app_router.dart';
+import 'package:rikka/screens/auth_provider.dart';
 import 'package:rikka/screens/schedule/schedule_page.dart';
 import 'package:rikka/utils/dialog.dart';
 import 'package:rikka/screens/schedule/detail/parser/parser_provide.dart';
 import 'package:rikka/screens/schedule/schedule_entity.dart';
 import 'package:rikka/screens/schedule/detail/parser/parser_entity.dart';
-import 'package:rikka/utils/logger.dart';
 
 import 'detail_entity.dart';
 import 'detail_provider.dart';
-import 'silent_cookie_service.dart';
 
 class DetailPage extends ConsumerStatefulWidget {
   final ScheduleEntity comics;
@@ -26,6 +24,7 @@ class DetailPage extends ConsumerStatefulWidget {
 class _DetailPageState extends ConsumerState<DetailPage> {
   @override
   Widget build(BuildContext context) {
+    final headers = ref.read(browserHeadersProvider);
     final double maxWidth = 300;
     // final double maxHeight = 300;
     ScheduleEntity comics = widget.comics;
@@ -45,7 +44,7 @@ class _DetailPageState extends ConsumerState<DetailPage> {
                   aspectRatio: 0.7, // 16:9 比例
                   child: CachedNetworkImage(
                     imageUrl: comics.vodPic,
-                    httpHeaders: BrowserHeaders.generate(),
+                    httpHeaders: headers,
                     placeholder: (context, url) =>
                         const Center(child: CircularProgressIndicator()),
                     unsupportedImageBuilder: (context, url, bytes) =>
@@ -106,100 +105,113 @@ class RecommendTab extends ConsumerStatefulWidget {
 }
 
 class _RecommendTabState extends ConsumerState<RecommendTab> {
-  @override
-  Widget build(BuildContext context) {
-    final parser = widget.parser;
-    final comics = widget.comics;
-    String step1Url = parser.searchUrl;
-    step1Url = step1Url.replaceAll('@keyword', comics.vodName);
+  // Future<void> _parserCookie() async {
+  //   final String code = showCode.text;
+  //   Log.i('_parserCookie: $code');
+  //   final parser = widget.verify.parser;
+  //   final parserCookie = ref.read(
+  //     parserCookieProvider(parser.basisUrl).notifier,
+  //   );
+  //   final verifyNotify = ref.read(verifyImgProvider(widget.verify).notifier);
+  //   final cookie = await verifyNotify.parserCookie(code, entity: parser);
+  //   parserCookie.setState(cookie ?? '');
 
-    final isCookie = ref.watch(isCookieProvider);
-    final cookieValue = ref.watch(parserCookieProvider(parser.basisUrl));
-
-    if (parser.verify) {
-      //如果需要获取coolie,获取cookie
-      if (isCookie) {
-        return DetailVerifyWidget(
-          verify: VerifyEntity(parser: parser, url: step1Url),
-        );
-      }
-      if (cookieValue.isEmpty) {
-        //1.如果需要验证，而且coolie为空，先获取cookie
-        return ElevatedButton(
-          onPressed: () {
-            ref.read(isCookieProvider.notifier).setState(true);
-          },
-          child: Text('获取验证码'),
-        );
-      }
-    }
-
-    return DetailListWidget(comics: comics, parser: parser);
-  }
-}
-
-class DetailVerifyWidget extends ConsumerStatefulWidget {
-  final VerifyEntity verify;
-  const DetailVerifyWidget({super.key, required this.verify});
-
-  @override
-  ConsumerState<DetailVerifyWidget> createState() => _DetailVerifyWidgetState();
-}
-
-class _DetailVerifyWidgetState extends ConsumerState<DetailVerifyWidget> {
-  final showCode = TextEditingController(text: '');
-
-  Future<void> _parserCookie() async {
-    final String code = showCode.text;
-    Log.i('_parserCookie: $code');
-    final parser = widget.verify.parser;
-    final parserCookie = ref.read(
-      parserCookieProvider(parser.basisUrl).notifier,
-    );
-    final verifyNotify = ref.read(verifyImgProvider(widget.verify).notifier);
-    final cookie = await verifyNotify.parserCookie(code, entity: parser);
-    parserCookie.setState(cookie ?? '');
-
-    ref.read(isCookieProvider.notifier).setState(false);
-  }
+  //   ref.read(isCookieProvider.notifier).setState(false);
+  // }
 
   @override
   Widget build(BuildContext context) {
-    // final parser = widget.verify.parser;
-    final imgCaptcha = ref.watch(verifyImgProvider(widget.verify));
-    final verifyNotifier = ref.read(verifyImgProvider(widget.verify).notifier);
-    return imgCaptcha.when(
-      data: (data) => Row(
-        children: [
-          Padding(
-            padding: EdgeInsets.all(20),
-            child: ElevatedButton(
-              onPressed: verifyNotifier.getScreenshot,
-              child: Image.memory(data!),
-            ),
-          ),
-          Expanded(
-            child: TextField(
-              controller: showCode,
-              autofocus: true,
-              decoration: InputDecoration(hintText: "验证码"),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final code = await CaptchaService.recognizeCaptcha(data);
-              showCode.text = code;
-            },
-            child: Text('解析'),
-          ),
-          ElevatedButton(onPressed: _parserCookie, child: Text('提交')),
-        ],
-      ),
-      error: (e, t) => Text('$e'),
-      loading: () => Center(child: CircularProgressIndicator()),
-    );
+    // final parser = widget.parser;
+    // final comics = widget.comics;
+    // String step1Url = parser.searchUrl;
+    // step1Url = step1Url.replaceAll('@keyword', comics.vodName);
+    // final isCookie = ref.watch(isCookieProvider);
+    // if (parser.verify) {
+    //   final cookieValue = ref.read(parserCookieProvider(parser.basisUrl));
+    //   if (cookieValue.isNotEmpty) {}
+
+    //   //如果需要获取coolie,获取cookie
+    //   if (isCookie) {
+    //     return DetailVerifyWidget(
+    //       verify: VerifyEntity(parser: parser, url: step1Url),
+    //     );
+    //   } else {
+    //     //1.如果需要验证，而且coolie为空，先获取cookie
+    //     return ElevatedButton(
+    //       onPressed: () {
+    //         ref.read(isCookieProvider.notifier).setState(true);
+    //       },
+    //       child: Text('获取验证码'),
+    //     );
+    //   }
+    // }
+
+    return DetailListWidget(comics: widget.comics, parser: widget.parser);
   }
 }
+
+// class DetailVerifyWidget extends ConsumerStatefulWidget {
+//   final VerifyEntity verify;
+//   const DetailVerifyWidget({super.key, required this.verify});
+
+//   @override
+//   ConsumerState<DetailVerifyWidget> createState() => _DetailVerifyWidgetState();
+// }
+
+// class _DetailVerifyWidgetState extends ConsumerState<DetailVerifyWidget> {
+//   final showCode = TextEditingController(text: '');
+
+//   Future<void> _parserCookie() async {
+//     final String code = showCode.text;
+//     Log.i('_parserCookie: $code');
+//     final parser = widget.verify.parser;
+//     final parserCookie = ref.read(
+//       parserCookieProvider(parser.basisUrl).notifier,
+//     );
+//     final verifyNotify = ref.read(verifyImgProvider(widget.verify).notifier);
+//     final cookie = await verifyNotify.parserCookie(code, entity: parser);
+//     parserCookie.setState(cookie ?? '');
+
+//     ref.read(isCookieProvider.notifier).setState(false);
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     // final parser = widget.verify.parser;
+//     final imgCaptcha = ref.watch(verifyImgProvider(widget.verify));
+//     final verifyNotifier = ref.read(verifyImgProvider(widget.verify).notifier);
+//     return imgCaptcha.when(
+//       data: (data) => Row(
+//         children: [
+//           Padding(
+//             padding: EdgeInsets.all(20),
+//             child: ElevatedButton(
+//               onPressed: verifyNotifier.getScreenshot,
+//               child: Image.memory(data!),
+//             ),
+//           ),
+//           Expanded(
+//             child: TextField(
+//               controller: showCode,
+//               autofocus: true,
+//               decoration: InputDecoration(hintText: "验证码"),
+//             ),
+//           ),
+//           ElevatedButton(
+//             onPressed: () async {
+//               final code = await CaptchaService.recognizeCaptcha(data);
+//               showCode.text = code;
+//             },
+//             child: Text('解析'),
+//           ),
+//           ElevatedButton(onPressed: _parserCookie, child: Text('提交')),
+//         ],
+//       ),
+//       error: (e, t) => Text('$e'),
+//       loading: () => Center(child: CircularProgressIndicator()),
+//     );
+//   }
+// }
 
 class DetailListWidget extends ConsumerWidget {
   final ScheduleEntity comics;

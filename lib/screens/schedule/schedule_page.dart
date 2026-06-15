@@ -1,8 +1,8 @@
-import 'package:browser_headers/browser_headers.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:rikka/screens/auth_provider.dart';
 import 'package:rikka/screens/schedule/schedule_provider.dart';
 import 'package:rikka/screens/schedule/parserapi/parser_api_entity.dart';
 import 'package:rikka/screens/schedule/parserapi/parser_api_provide.dart';
@@ -94,7 +94,7 @@ class TabBarViewWidget extends ConsumerWidget {
 }
 
 // 视频卡片 - 垂直布局
-class ComicsCardH extends StatelessWidget {
+class ComicsCardH extends ConsumerWidget {
   const ComicsCardH({
     super.key,
     required this.comics,
@@ -107,8 +107,9 @@ class ComicsCardH extends StatelessWidget {
   final bool enableHero;
 
   @override
-  Widget build(BuildContext context) {
-    final httpHeaders = BrowserHeaders.generate();
+  Widget build(BuildContext context, WidgetRef ref) {
+    // final httpHeaders = BrowserHeaders.generate();
+    final headers = ref.read(browserHeadersProvider);
 
     return Card(
       elevation: 0,
@@ -130,7 +131,7 @@ class ComicsCardH extends StatelessWidget {
                   aspectRatio: 0.7, // 16:9 比例
                   child: CachedNetworkImage(
                     imageUrl: comics.vodPic,
-                    httpHeaders: httpHeaders,
+                    httpHeaders: headers,
                     placeholder: (context, url) =>
                         const Center(child: CircularProgressIndicator()),
                     unsupportedImageBuilder: (context, url, bytes) =>

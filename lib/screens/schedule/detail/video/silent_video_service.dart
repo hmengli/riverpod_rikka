@@ -6,9 +6,7 @@ import 'package:rikka/utils/logger.dart';
 
 final videoServiceProvider = Provider.autoDispose<SilentVideoService>((ref) {
   final silentVideoService = SilentVideoService();
-  if (ref.mounted) {
-    ref.onDispose(silentVideoService.dispose);
-  }
+  ref.onDispose(silentVideoService.dispose);
   return silentVideoService;
 });
 
