@@ -2,24 +2,16 @@ import 'dart:async';
 import 'dart:collection';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rikka/utils/logger.dart';
+import 'package:rikka/logger/logger.dart';
+
+import 'extract_entity.dart';
 
 final videoServiceProvider = Provider.autoDispose<SilentVideoService>((ref) {
   final silentVideoService = SilentVideoService();
+  silentVideoService._initWebView();
   ref.onDispose(silentVideoService.dispose);
   return silentVideoService;
 });
-
-class Extractor {
-  static const String mp4 = 'mp4';
-  static const String m3u8 = 'm3u8';
-  final String type;
-  final String url;
-
-  Extractor({required this.type, required this.url});
-  @override
-  String toString() => 'Extractor($type, $url)';
-}
 
 /// 全局单例的视频提取器
 /// - 内部维护一个 WebView 实例，复用而不是每次都新建销毁
@@ -29,12 +21,16 @@ class SilentVideoService implements Disposable {
   bool _isInitialized = false;
   bool _isDisposed = false;
 
+  final Completer<InAppWebViewController> _controllerCompleter = Completer();
+  Future<InAppWebViewController> get controllerReady =>
+      _controllerCompleter.future.timeout(Duration(seconds: 10));
+
   // 任务队列
-  final Queue<_ExtractTask> _taskQueue = Queue();
+  final Queue<ExtractTask> _taskQueue = Queue();
   bool _isProcessing = false;
 
   // 当前活动任务
-  _ExtractTask? _currentTask;
+  ExtractTask? _currentTask;
 
   // 初始化 WebView（只做一次）
   Future<void> _initWebView() async {
@@ -49,6 +45,12 @@ class SilentVideoService implements Disposable {
         supportZoom: false,
         mediaPlaybackRequiresUserGesture: false,
       ),
+      onWebViewCreated: (controller) {
+        if (!_controllerCompleter.isCompleted) {
+          Log.d('Created');
+          _controllerCompleter.complete(controller);
+        }
+      },
       onReceivedError: (controller, request, error) {
         // 全局错误处理，交给当前任务
         if (_currentTask != null && !_currentTask!.completer.isCompleted) {
@@ -78,11 +80,11 @@ class SilentVideoService implements Disposable {
         if (_currentTask!.selectorMp.isNotEmpty &&
             url.contains(_currentTask!.selectorMp)) {
           Log.i('🎯 [Extractor] 匹配到mp4视频: $url');
-          _onUrlFound(url, Extractor.mp4);
+          _onUrlFound(url, Extension.mp4);
         } else if (_currentTask!.selectorUm.isNotEmpty &&
             url.contains(_currentTask!.selectorUm)) {
           Log.i('🎯 [Extractor] 匹配到m3u8视频: $url');
-          _onUrlFound(url, Extractor.m3u8);
+          _onUrlFound(url, Extension.m3u8);
         } else if (_isVideoRequest(url)) {
           Log.i('🎯 [Extractor] 检索到视频: $url');
           _onUrlFound(url, _determineType(url));
@@ -97,14 +99,9 @@ class SilentVideoService implements Disposable {
     Log.d('✅ 全局 WebView 已初始化');
   }
 
-  void _onUrlFound(String url, String type) {
-    if (_currentTask != null &&
-        _currentTask!.result == null &&
-        !_currentTask!.completer.isCompleted) {
-      _currentTask!.result = Extractor(type: type, url: url);
-      _currentTask!.completer.complete(_currentTask!.result);
-      // 注意：不要在这里 _finishCurrentTask，因为页面可能还需要继续加载（但我们已经找到结果，可以完成）
-      // 实际上我们找到结果后就可以结束任务，但 WebView 可能还会触发其他请求，不过没关系，我们已标记完成
+  void _onUrlFound(String url, Extension type) {
+    if (_currentTask != null && !_currentTask!.completer.isCompleted) {
+      _currentTask!.completer.complete(ExtractEntity(type: type, url: url));
     }
   }
 
@@ -122,18 +119,18 @@ class SilentVideoService implements Disposable {
   }
 
   /// 根据 URL 后缀或特征判断类型
-  String _determineType(String url) {
+  Extension _determineType(String url) {
     final lower = url.toLowerCase();
     if (lower.contains('.m3u8') ||
         lower.contains('listres') ||
         lower.contains('.m3u8?')) {
-      return Extractor.m3u8;
+      return Extension.m3u8;
     }
-    return Extractor.mp4;
+    return Extension.mp4;
   }
 
   /// 添加提取任务
-  Future<Extractor?> extract(
+  Future<ExtractEntity?> extract(
     String pageUrl, {
     required String selectorMp,
     required String selectorUm,
@@ -143,15 +140,13 @@ class SilentVideoService implements Disposable {
       return null;
     }
 
-    // 确保 WebView 已初始化
-    await _initWebView();
+    final completer = Completer<ExtractEntity?>();
 
-    final completer = Completer<Extractor?>();
-    final task = _ExtractTask(
-      pageUrl,
-      completer,
+    final task = ExtractTask(
       selectorMp: selectorMp,
       selectorUm: selectorUm,
+      pageUrl: pageUrl,
+      completer: completer,
     );
     _taskQueue.add(task);
 
@@ -174,40 +169,32 @@ class SilentVideoService implements Disposable {
   }
 
   /// 执行单个任务
-  Future<void> _runTask(_ExtractTask task) async {
+  Future<void> _runTask(ExtractTask task) async {
     final completer = task.completer;
     final pageUrl = task.pageUrl;
-    // final selector = task.selector;
 
     Log.i('🔇 [单例] 开始提取: $pageUrl');
     try {
-      // 加载页面
-      await _headlessWebView?.webViewController?.loadUrl(
-        urlRequest: URLRequest(url: WebUri(pageUrl)),
-      );
+      final controller = await controllerReady;
+      await controller.loadUrl(urlRequest: URLRequest(url: WebUri(pageUrl)));
 
       // 等待结果，超时 30 秒
-      final result = await completer.future.timeout(
+      await completer.future.timeout(
         const Duration(seconds: 30),
         onTimeout: () {
           Log.i('⏰ [单例] 提取超时，返回已找到的结果（如果有）');
-          return task.result; // 已有结果则返回，否则 null
+          return null;
         },
       );
-      task.result = result;
-      Log.i('🏁 [单例] 任务完成，${task.result}');
-      if (!completer.isCompleted) {
-        completer.complete(result);
-      }
+
+      await controller.stopLoading();
+      Log.i('🏁 [单例] 任务完成，WebView 暂留待用');
     } catch (e) {
       Log.i('🔥 [单例] 提取异常: $e');
       if (!completer.isCompleted) {
         completer.completeError(e);
       }
     }
-    // 任务结束后，停止加载，清空页面
-    await _headlessWebView?.webViewController?.stopLoading();
-    Log.i('🏁 [单例] 任务完成，WebView 暂留待用');
   }
 
   void _finishCurrentTask() {
@@ -236,21 +223,6 @@ class SilentVideoService implements Disposable {
     _isInitialized = false;
     Log.i('🧹 全局提取器已释放');
   }
-}
-
-class _ExtractTask {
-  final String pageUrl;
-  final String selectorMp;
-  final String selectorUm;
-  final Completer<Extractor?> completer;
-  Extractor? result;
-
-  _ExtractTask(
-    this.pageUrl,
-    this.completer, {
-    required this.selectorMp,
-    required this.selectorUm,
-  });
 }
 
 class ExtractException implements Exception {

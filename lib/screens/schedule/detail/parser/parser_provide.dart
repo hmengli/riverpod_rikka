@@ -1,5 +1,5 @@
 import 'package:hive_ce/hive.dart';
-import 'package:rikka/utils/logger.dart';
+import 'package:rikka/logger/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 

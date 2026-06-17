@@ -2,116 +2,39 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:browser_headers/browser_headers.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import 'package:rikka/utils/logger.dart';
+import 'package:rikka/logger/logger.dart';
 import 'package:rikka/utils/utils.dart';
 
-// ===================== 基础模型 & 拦截器接口 =====================
-
-class ProxyRequest {
-  final String method;
-  final String url; // 远程请求的相对路径 + query
-  final Map<String, String> headers;
-  final List<int>? body;
-
-  const ProxyRequest({
-    required this.method,
-    required this.url,
-    required this.headers,
-    this.body,
-  });
-
-  ProxyRequest copyWith({
-    String? method,
-    String? url,
-    Map<String, String>? headers,
-    List<int>? body,
-  }) => ProxyRequest(
-    method: method ?? this.method,
-    url: url ?? this.url,
-    headers: headers ?? this.headers,
-    body: body ?? this.body,
-  );
-}
-
-class ProxyResponse {
-  final int statusCode;
-  final Map<String, String> headers;
-  final List<int>? body;
-
-  const ProxyResponse({
-    required this.statusCode,
-    required this.headers,
-    this.body,
-  });
-
-  ProxyResponse copyWith({
-    int? statusCode,
-    Map<String, String>? headers,
-    List<int>? body,
-  }) => ProxyResponse(
-    statusCode: statusCode ?? this.statusCode,
-    headers: headers ?? this.headers,
-    body: body ?? this.body,
-  );
-}
-
-abstract class ProxyInterceptor {
-  Future<ProxyResponse?> onRequest(ProxyRequest request) async => null;
-
-  Future<ProxyResponse> onResponse(
-    ProxyResponse response,
-    ProxyRequest originalRequest,
-  ) async => response;
-}
-
-// ===================== 组合拦截器 =====================
-
-class CompositeInterceptor extends ProxyInterceptor {
-  final List<ProxyInterceptor> interceptors;
-
-  CompositeInterceptor(this.interceptors);
-
-  @override
-  Future<ProxyResponse?> onRequest(ProxyRequest request) async {
-    for (final interceptor in interceptors) {
-      final res = await interceptor.onRequest(request);
-      if (res != null) return res;
-    }
-    return null;
-  }
-
-  @override
-  Future<ProxyResponse> onResponse(
-    ProxyResponse response,
-    ProxyRequest originalRequest,
-  ) async {
-    ProxyResponse current = response;
-    for (final interceptor in interceptors) {
-      current = await interceptor.onResponse(current, originalRequest);
-    }
-    return current;
-  }
-}
-
-// ===================== 路由定义（增加地址映射） =====================
-
-class ProxyRoute {
-  /// 本地代理路径前缀，如 /proxy/
-  final String localPath;
-
-  /// 该路由对应的拦截器
-  final ProxyInterceptor? interceptor;
-
-  const ProxyRoute({required this.localPath, this.interceptor});
-}
+import 'proxy_entity.dart';
 
 // ===================== 代理服务（单例） =====================
 
 final proxyServiceProvider = Provider.autoDispose<SilentProxyService>((ref) {
-  return SilentProxyService();
+  final silentProxyService = SilentProxyService();
+  silentProxyService.start(
+    routes: [
+      ProxyRoute(
+        localPath: '/proxy/ts', // A 路由
+        interceptor: CompositeInterceptor([
+          TsInterceptor(),
+          LogInterceptor(),
+        ]), // 只修改
+      ),
+      ProxyRoute(
+        localPath: '/proxy/mu', // B 路由
+        interceptor: CompositeInterceptor([
+          LogInterceptor(),
+          MuInterceptor(),
+        ]), // 只缓存
+      ),
+    ],
+  );
+  ref.onDispose(silentProxyService.dispose);
+  return silentProxyService;
 });
 
 class SilentProxyService extends Disposable {
@@ -142,6 +65,7 @@ class SilentProxyService extends Disposable {
     _routes = routes;
     _server = await HttpServer.bind(InternetAddress.loopbackIPv4, 8080);
     _server!.listen(_handleRequest);
+    Log.i('message: 代理服务启动');
     return localProxyAddress!;
   }
 
@@ -149,6 +73,7 @@ class SilentProxyService extends Disposable {
   Future<void> dispose() async {
     if (_server != null) {
       await _server!.close(force: true);
+      Log.i('message: 代理服务关闭');
       _server = null;
     }
   }
@@ -176,11 +101,9 @@ class SilentProxyService extends Disposable {
   }
 
   Future<String> getMuUrl(String uri) async {
+    final headers = BrowserHeaders.generate();
     // 1. 预先获取并缓存 M3U8 内容
-    final response = await http.get(
-      Uri.parse(uri),
-      headers: {'User-Agent': Utils.userAgent},
-    );
+    final response = await http.get(Uri.parse(uri), headers: headers);
     if (response.statusCode == 200) {
       _cachedM3U8Content = _rewriteTsUrls(response.body);
     }
@@ -219,7 +142,6 @@ class SilentProxyService extends Disposable {
         addressMap.addAll({'originalUrl$tsIndex.ts': line});
         line = 'http://127.0.0.1:8080/proxy/ts/originalUrl$tsIndex.ts';
         tsIndex++;
-        // debugPrint('🔄 重写分片: ${originalUrl.substring(0, min(50, originalUrl.length))}... → $filename');
       }
       newLines.add(line);
     }
@@ -310,8 +232,10 @@ class SilentProxyService extends Disposable {
           remoteReq.headers.set(name, value);
         }
       });
-      remoteReq.headers.set('User-Agent', Utils.userAgent);
-      remoteReq.headers.set('Referer', 'https://player.ezdmw.com');
+
+      // remoteReq.headers.set('User-Agent', Utils.userAgent);
+      // remoteReq.headers.set('Referer', 'https://player.ezdmw.com');
+
       if (proxyReq.body != null && proxyReq.body!.isNotEmpty) {
         remoteReq.add(proxyReq.body!);
       }
@@ -321,6 +245,9 @@ class SilentProxyService extends Disposable {
         <int>[],
         (prev, chunk) => prev..addAll(chunk),
       );
+
+      Log.i('Proxy: ${remoteRes.statusCode}');
+      Log.i('Proxy: ${remoteRes.headers.toString()}');
 
       ProxyResponse proxyRes = ProxyResponse(
         statusCode: remoteRes.statusCode,

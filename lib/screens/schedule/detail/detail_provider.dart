@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:rikka/screens/auth_provider.dart';
 import 'package:rikka/screens/schedule/detail/parser/parser_entity.dart';
-import 'package:rikka/utils/logger.dart';
+import 'package:rikka/logger/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../schedule_entity.dart';
@@ -11,67 +11,7 @@ import 'silent_cookie_service.dart';
 
 part 'detail_provider.g.dart';
 
-@riverpod
-class IsCookieNotifier extends _$IsCookieNotifier {
-  @override
-  bool build() => false;
-  void setState(bool value) => state = value;
-}
-
-@riverpod
-class VerifyImgNotifier extends _$VerifyImgNotifier {
-  late final SilentCookieService cookie;
-
-  @override
-  void build(ParserEntity parser) {
-    cookie = ref.watch(cookieServiceProvider);
-    // cookie.initWebView();
-    // ref.onDispose(cookie.dispose);
-  }
-
-  Future<Uint8List?> loadingPage(String url) async {
-    return cookie.captureScreenshot(url, parser.verifyPng);
-  }
-
-  Future<Uint8List?> getScreenshot() async {
-    return cookie.getScreenshot(parser.verifyPng);
-  }
-
-  Future<String?> parserCookie(String? code) {
-    return cookie.submitCaptcha(
-      code,
-      input: parser.verifyInput,
-      submit: parser.verifySubmit,
-    );
-  }
-
-  Future<String?> getVerifyCookie(String url) async {
-    Uint8List? verifyPng = await cookie.captureScreenshot(
-      url,
-      parser.verifyPng,
-    );
-
-    if (verifyPng == null) {
-      return cookie.getCookieExpiry();
-    }
-
-    String code = await CaptchaService.recognizeCaptcha(verifyPng);
-
-    if (code.length < 4) {
-      verifyPng = await cookie.getScreenshot(parser.verifyPng);
-      if (verifyPng == null) {
-        return cookie.getCookieExpiry();
-      }
-      code = await CaptchaService.recognizeCaptcha(verifyPng);
-    }
-
-    return cookie.submitCaptcha(
-      code,
-      input: parser.verifyInput,
-      submit: parser.verifySubmit,
-    );
-  }
-}
+// ===================== 页面请求：返回数据列表 =====================
 
 @riverpod
 Future<List<DetailEntity>> detailList(
@@ -79,12 +19,16 @@ Future<List<DetailEntity>> detailList(
   ParserEntity parser,
   ScheduleEntity comics,
 ) async {
+  // 依赖请求服务
   final parserService = ref.watch(parserServiceProvider);
+  // 部分需要cookie
   final cookie = ref.read(parserCookieProvider(parser.basisUrl));
+  // 动态请求头
   final headers = ref.read(browserHeadersProvider);
   if (cookie.isNotEmpty) {
     headers.addAll({'Cookie': cookie});
   }
+  // 获取页面
   Log.i('detailList: $cookie');
   String resultsStep1 = await parserService.parseWithConfig(
     parser.searchUrl,
@@ -92,24 +36,26 @@ Future<List<DetailEntity>> detailList(
     headers: headers,
     entity: parser,
   );
-
+  //需要验证
   if (parser.verify) {
+    //验证Cookie是否有效
     final List<String> verifyCookie = parserService.extractLinks4(
       resultsStep1,
       selector: parser.verifyPng,
     );
 
     Log.i('verifyCookie: $verifyCookie');
+    // 无效Cookie
     if (verifyCookie.isNotEmpty) {
-      final url = parser.searchUrl.replaceAll('@keyword', comics.vodName);
-      // String? newCookie = '';
       final verifyNotifier = ref.watch(verifyImgProvider(parser).notifier);
+      String url = parser.searchUrl.replaceAll('@keyword', comics.vodName);
       String? newCookie = await verifyNotifier.getVerifyCookie(url);
 
       final cookieNotifier = ref.read(
         parserCookieProvider(parser.basisUrl).notifier,
       );
       cookieNotifier.setState(newCookie ?? '');
+
       headers.addAll({'cookie': newCookie ?? ''});
       resultsStep1 = await parserService.parseWithConfig(
         parser.searchUrl,
@@ -134,6 +80,62 @@ Future<List<DetailEntity>> detailList(
       comics: comics,
     );
   }).toList();
+}
+
+@riverpod
+class IsCookieNotifier extends _$IsCookieNotifier {
+  @override
+  bool build() => false;
+  void setState(bool value) => state = value;
+}
+
+@riverpod
+class VerifyImgNotifier extends _$VerifyImgNotifier {
+  late final SilentCookieService cookie;
+
+  @override
+  void build(ParserEntity parser) {
+    cookie = ref.watch(cookieServiceProvider);
+  }
+
+  Future<Uint8List?> loadingPage(String url) async {
+    return cookie.captureScreenshot(url, parser.verifyPng);
+  }
+
+  Future<Uint8List?> getScreenshot() async {
+    return cookie.getScreenshot(parser.verifyPng);
+  }
+
+  Future<String?> parserCookie(String? code) {
+    return cookie.submitCaptcha(
+      code,
+      input: parser.verifyInput,
+      submit: parser.verifySubmit,
+    );
+  }
+
+  Future<String?> getVerifyCookie(String url) async {
+    Uint8List? verifyPng = await loadingPage(url);
+
+    if (verifyPng == null) {
+      return await cookie.getCookieExpiry();
+    }
+    String code = await CaptchaService.recognizeCaptcha(verifyPng);
+
+    if (code.length < 4) {
+      verifyPng = await getScreenshot();
+      if (verifyPng == null) {
+        return await cookie.getCookieExpiry();
+      }
+      code = await CaptchaService.recognizeCaptcha(verifyPng);
+    }
+
+    return await cookie.submitCaptcha(
+      code,
+      input: parser.verifyInput,
+      submit: parser.verifySubmit,
+    );
+  }
 }
 
 @Riverpod(keepAlive: true)

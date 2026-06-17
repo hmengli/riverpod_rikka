@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:rikka/screens/auth_provider.dart';
-import 'package:rikka/utils/logger.dart';
+import 'package:rikka/logger/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'parserapi/parser_api_entity.dart';

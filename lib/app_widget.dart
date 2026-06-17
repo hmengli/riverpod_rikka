@@ -7,7 +7,7 @@ import 'package:window_manager/window_manager.dart';
 import 'app_router.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/settings/theme/theme_provider.dart';
-import 'utils/logger.dart';
+import 'logger/logger.dart';
 
 class AppWidget extends ConsumerStatefulWidget {
   const AppWidget({super.key});
@@ -90,9 +90,9 @@ class _AppWidgetState extends ConsumerState<AppWidget>
     );
     BottomNavigationBarThemeData bottomNavigationBarThemeData =
         BottomNavigationBarThemeData(
-          backgroundColor: Theme.of(context).canvasColor, // 背景颜色
-          selectedItemColor: Theme.of(context).primaryColor, // 选中项颜色
-          unselectedItemColor: Theme.of(context).disabledColor, // 未选中项颜色
+          // backgroundColor: Theme.of(context).canvasColor, // 背景颜色
+          // selectedItemColor: Theme.of(context).primaryColor, // 选中项颜色
+          // unselectedItemColor: Theme.of(context).disabledColor, // 未选中项颜色
           showSelectedLabels: true, // 是否显示选中项标签
           showUnselectedLabels: true, // 是否显示未选中项标签
           enableFeedback: true,

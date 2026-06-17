@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rikka/screens/login_screen.dart';
 import 'package:rikka/screens/schedule/detail/video/playlist_page.dart';
-import 'package:rikka/utils/logger.dart';
+import 'package:rikka/logger/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'app_router.dart' as app_router;
 import 'screens/auth_provider.dart';

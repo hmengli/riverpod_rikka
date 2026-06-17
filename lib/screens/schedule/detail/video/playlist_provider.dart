@@ -1,14 +1,15 @@
 // playlist_provider.dart
 import 'dart:async';
 
-import 'package:rikka/screens/schedule/detail/video/silent_proxy_service.dart';
-import 'package:rikka/screens/schedule/detail/video/silent_video_service.dart';
+import 'package:rikka/screens/schedule/detail/video/proxy/silent_proxy_service.dart';
+import 'package:rikka/screens/schedule/detail/video/extract/silent_video_service.dart';
 import 'package:rikka/screens/schedule/detail/detail_entity.dart';
 import 'package:rikka/screens/schedule/detail/video/player/video_provider.dart';
-import 'package:rikka/utils/logger.dart';
+import 'package:rikka/logger/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../detail_provider.dart';
+import 'extract/extract_entity.dart';
 import 'playlist_entity.dart';
 
 part 'playlist_provider.g.dart';
@@ -39,7 +40,7 @@ class PlaylistNotifier extends _$PlaylistNotifier {
     DetailEntity detail = state.detail;
     final eNotifier = ref.read(extractServiceProvider(detail.parser).notifier);
     final videoSilent = ref.watch(videoServiceProvider);
-    final proxyService = ref.watch(proxyServiceProvider);
+
     try {
       String? href = state.step3Map[state.curIndex][state.selIndex]['href'];
       if (href == null) return null;
@@ -50,29 +51,25 @@ class PlaylistNotifier extends _$PlaylistNotifier {
       if (iframeUrl != null) {
         videoUrl = iframeUrl;
       }
-      final Extractor? extractorUrl = await videoSilent.extract(
+      final ExtractEntity? extractorUrl = await videoSilent.extract(
         videoUrl,
         selectorMp: detail.parser.selectorVideo,
         selectorUm: detail.parser.selectorM3u8,
       );
       if (extractorUrl != null) {
-        if (Extractor.m3u8.contains(extractorUrl.type)) {
-          String requestUrl = await proxyService.getMuUrl(extractorUrl.url);
-          if (extractorUrl.url.contains('url=')) {
-            Uri uri = Uri.parse(extractorUrl.url);
-            requestUrl = uri.queryParameters['url'] ?? requestUrl;
-          }
-          Log.i('_fetchUrl:$requestUrl');
-          return requestUrl;
-        } else if (Extractor.mp4.contains(extractorUrl.type)) {
-          String requestUrl = extractorUrl.url;
-          if (extractorUrl.url.contains('url=')) {
-            Uri uri = Uri.parse(extractorUrl.url);
-            requestUrl = uri.queryParameters['url'] ?? requestUrl;
-          }
-          Log.i('_fetchUrl:$requestUrl');
-          return requestUrl;
+        String requestUrl = extractorUrl.url;
+        if (extractorUrl.url.contains('url=')) {
+          Uri uri = Uri.parse(extractorUrl.url);
+          requestUrl = uri.queryParameters['url'] ?? requestUrl;
         }
+        switch (extractorUrl.type) {
+          case Extension.m3u8:
+            final proxyService = ref.watch(proxyServiceProvider);
+            requestUrl = await proxyService.getMuUrl(extractorUrl.url);
+          case Extension.mp4:
+        }
+        Log.i('_fetchUrl:$requestUrl');
+        return requestUrl;
       }
       return null;
     } catch (e) {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rikka/screens/schedule/detail/detail_provider.dart';
-import 'package:rikka/utils/logger.dart';
+import 'package:rikka/logger/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../auth_provider.dart';

@@ -3,6 +3,8 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 
 class Utils {
   static const String appName = 'Riverpod Rikka';
@@ -59,7 +61,17 @@ class Utils {
 
   /// 判断是否为桌面设备
   static bool isDesktop() {
+    if (kIsWeb) return false;
     return Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+  }
+
+  static Future<String> getDirectory() async {
+    if (!kIsWeb) {
+      // 📱 移动端/桌面端：正常使用文档目录
+      final appDir = await getApplicationDocumentsDirectory();
+      return appDir.path;
+    }
+    return '';
   }
 
   static bool isTablet() {

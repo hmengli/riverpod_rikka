@@ -6,7 +6,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:html/parser.dart' as parser;
 import 'package:http/http.dart' as http;
-import 'package:rikka/utils/logger.dart';
+import 'package:rikka/logger/logger.dart';
 import 'package:rikka/utils/utils.dart';
 
 import 'parser/parser_entity.dart';
@@ -21,7 +21,7 @@ final cookieServiceProvider = Provider.autoDispose<SilentCookieService>((ref) {
 class SilentCookieService extends Disposable {
   bool _initialized = false;
   late Completer<bool> _verifyLoadCompleter = Completer();
-  late final Completer<void> _pageLoadCompleter = Completer();
+  late Completer<void> _pageLoadCompleter = Completer();
   late Completer<Uint8List?> _capturedCompleter = Completer();
   late WebUri webUri;
   late HeadlessInAppWebView _headlessWebView;
@@ -55,6 +55,8 @@ class SilentCookieService extends Disposable {
                     pureBase64.startsWith("data:image/png")) {
                   Uint8List byte = base64.decode(pureBase64.split(',').last);
                   _capturedCompleter.complete(byte);
+                } else {
+                  _capturedCompleter.complete(null);
                 }
               }
               Log.d('toFlutter:$data');
@@ -103,6 +105,7 @@ class SilentCookieService extends Disposable {
       webUri = WebUri(url);
       final currentUrl = await controller.getUrl();
       if (currentUrl != null && currentUrl.path != webUri.path) {
+        _pageLoadCompleter = Completer();
         await controller.loadUrl(urlRequest: URLRequest(url: webUri));
         await _pageLoadCompleter.future.timeout(Duration(seconds: 10));
       }
@@ -271,12 +274,13 @@ class SilentCookieService extends Disposable {
         """;
         controller.evaluateJavascript(source: submitJs);
         final verifyLoad = await _verifyLoadCompleter.future.timeout(
-          Duration(seconds: 10),
+          Duration(seconds: 5),
           onTimeout: () => false,
         );
+        Log.d('verifyLoad: $verifyLoad');
         if (!verifyLoad) return null;
       }
-      await Future.delayed(Duration(seconds: 4));
+      await Future.delayed(Duration(seconds: 3));
       return getCookieExpiry();
     } catch (e) {
       Log.e('submitCaptcha: $e');
@@ -288,7 +292,6 @@ class SilentCookieService extends Disposable {
     final controller = await controllerReady;
     final currentUrl = await controller.getUrl();
     final cookies = await _cookieManager.getCookies(url: currentUrl!);
-    Log.i('submitCaptcha: $cookies');
     return cookies.map((c) => '${c.name}=${c.value}').join('; ');
   }
 

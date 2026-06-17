@@ -5,13 +5,13 @@ import 'parser/parser_entity.dart';
 
 part 'detail_entity.freezed.dart';
 
-@freezed
-abstract class VerifyEntity with _$VerifyEntity {
-  const factory VerifyEntity({
-    required String url,
-    required ParserEntity parser,
-  }) = _VerifyEntity;
-}
+// @freezed
+// abstract class VerifyEntity with _$VerifyEntity {
+//   const factory VerifyEntity({
+//     required String url,
+//     required ParserEntity parser,
+//   }) = _VerifyEntity;
+// }
 
 @freezed
 abstract class DetailEntity with _$DetailEntity {

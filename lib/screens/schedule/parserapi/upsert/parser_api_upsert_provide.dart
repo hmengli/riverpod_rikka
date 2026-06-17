@@ -1,4 +1,4 @@
-import 'package:rikka/utils/logger.dart';
+import 'package:rikka/logger/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../parser_api_entity.dart';
